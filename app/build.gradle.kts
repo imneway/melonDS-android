@@ -14,10 +14,17 @@ android {
     signingConfigs {
         create("release") {
             val props = gradleLocalProperties(rootDir, providers)
-            storeFile = file(props["MELONDS_KEYSTORE"] as String)
-            storePassword = props["MELONDS_KEYSTORE_PASSWORD"] as String
-            keyAlias = props["MELONDS_KEY_ALIAS"] as String
-            keyPassword = props["MELONDS_KEY_PASSWORD"] as String
+            val keystorePath = props["MELONDS_KEYSTORE"] as String?
+            val keystorePassword = props["MELONDS_KEYSTORE_PASSWORD"] as String?
+            val keyAlias = props["MELONDS_KEY_ALIAS"] as String?
+            val keyPassword = props["MELONDS_KEY_PASSWORD"] as String?
+            
+            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
         }
     }
 
@@ -52,7 +59,11 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            val props = gradleLocalProperties(rootDir, providers)
+            val keystorePath = props["MELONDS_KEYSTORE"] as String?
+            if (keystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         getByName("debug") {
             applicationIdSuffix = ".dev"
