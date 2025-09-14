@@ -130,10 +130,10 @@ class SaveStateListAdapter(
     }
 
     private fun getSaveSateSlotName(context: Context, slot: SaveStateSlot): String {
-        return if (slot.slot == SaveStateSlot.QUICK_SAVE_SLOT) {
-            context.getString(R.string.quick_slot)
-        } else {
-            slot.slot.toString()
+        return when (slot.slot) {
+            SaveStateSlot.QUICK_SAVE_SLOT -> context.getString(R.string.quick_slot)
+            SaveStateSlot.AUTO_SAVE_SLOT -> context.getString(R.string.auto_save_slot)
+            else -> slot.slot.toString()
         }
     }
 }

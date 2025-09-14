@@ -7,5 +7,6 @@ data class SaveStateSlot(val slot: Int, val exists: Boolean, val lastUsedDate: D
 
     companion object {
         const val QUICK_SAVE_SLOT = 0
+        const val AUTO_SAVE_SLOT = -1  // Auto Save Slot 使用特殊值 -1
     }
 }

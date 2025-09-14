@@ -347,6 +347,8 @@ class EmulatorViewModel @Inject constructor(
                     RomPauseMenuOption.VIEW_ACHIEVEMENTS -> _uiEvent.tryEmit(EmulatorUiEvent.ShowAchievementList)
                     RomPauseMenuOption.RESET -> resetEmulator()
                     RomPauseMenuOption.EXIT -> {
+                        // 退出游戏时自动存档
+                        doAutoSave()
                         emulatorManager.stopEmulator()
                         _uiEvent.tryEmit(EmulatorUiEvent.CloseEmulator)
                     }
@@ -467,6 +469,28 @@ class EmulatorViewModel @Inject constructor(
         return (_emulatorState.value as? EmulatorState.RunningRom)?.let {
             saveStatesRepository.deleteRomSaveState(it.rom, slot)
             getRomSaveStateSlots(it.rom)
+        }
+    }
+
+    fun doAutoSave() {
+        val currentState = _emulatorState.value
+        when (currentState) {
+            is EmulatorState.RunningRom -> {
+                sessionCoroutineScope.launch {
+                    emulatorManager.pauseEmulator()
+                    val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
+                    if (saveRomState(currentState.rom, autoSaveSlot)) {
+                        _toastEvent.emit(ToastEvent.AutoSaveSuccessful)
+                    }
+                    emulatorManager.resumeEmulator()
+                }
+            }
+            is EmulatorState.RunningFirmware -> {
+                // 固件模式下不进行自动存档
+            }
+            else -> {
+                // Do nothing
+            }
         }
     }
 
