@@ -21,48 +21,104 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:background="#AFFF"
             android:clickable="true"
-            android:focusable="false"
-            android:gravity="center_vertical">
+            android:focusable="false">
 
-        <Button
-                android:id="@+id/button_delete_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/delete"
-                style="@style/Button.Editor" />
-
+        <!-- 删除按钮 -->
         <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minWidth="34sp"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <Button
+                    android:id="@+id/button_delete_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="@string/delete"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp"
+                    android:textSize="12sp"
+                    android:minHeight="32dp"
+                    android:minWidth="0dp" />
+
+            <Space
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- 尺寸控制行 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
 
             <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/textLayoutEditor"
-                    android:text="@string/label_size" />
+                    android:text="@string/label_size"
+                    android:minWidth="60sp" />
 
             <TextView
                     android:id="@+id/text_size"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/textLayoutEditor"
-                    android:gravity="center_horizontal"
-                    tools:text="1080" />
+                    android:minWidth="50sp"
+                tools:text="1080" />
+
+            <SeekBar
+                    android:id="@+id/seek_bar_scaling"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:max="5000"
+                    android:layout_gravity="center_vertical" />
         </LinearLayout>
 
-        <SeekBar
-                android:id="@+id/seek_bar_scaling"
+        <!-- 透明度控制行 -->
+        <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="8dp"
-                android:max="10000"
-                android:layout_gravity="center_vertical" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:text="Opacity"
+                    android:minWidth="60sp" />
+
+            <TextView
+                    android:id="@+id/text_opacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:minWidth="50sp"
+                tools:text="100%" />
+
+            <SeekBar
+                    android:id="@+id/seek_bar_opacity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:max="100"
+                    android:progress="100"
+                    android:layout_gravity="center_vertical" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout

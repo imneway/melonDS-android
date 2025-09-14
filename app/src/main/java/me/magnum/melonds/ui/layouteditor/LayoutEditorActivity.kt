@@ -39,6 +39,7 @@ import me.magnum.melonds.extensions.setLayoutOrientation
 import me.magnum.melonds.impl.ScreenUnitsConverter
 import me.magnum.melonds.ui.common.TextInputDialog
 import me.magnum.melonds.utils.getLayoutComponentName
+import kotlin.math.max
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -111,6 +112,20 @@ class LayoutEditorActivity : AppCompatActivity() {
                 val scale = progress / binding.seekBarScaling.max.toFloat()
                 binding.textSize.text = ((binding.seekBarScaling.max - selectedViewMinSize) * scale + selectedViewMinSize).toInt().toString()
                 binding.viewLayoutEditor.scaleSelectedView(scale)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+        })
+
+        binding.seekBarOpacity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                // 允许透明度从 0% 到 100%
+                binding.textOpacity.text = "$progress%"
+                binding.viewLayoutEditor.setSelectedViewOpacity(progress)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -291,6 +306,11 @@ class LayoutEditorActivity : AppCompatActivity() {
             max = maxSize
             progress = (currentScale * maxSize).toInt()
         }
+
+        // 设置透明度控制
+        val currentOpacity = binding.viewLayoutEditor.getSelectedViewOpacity()
+        binding.seekBarOpacity.progress = currentOpacity
+        binding.textOpacity.text = "$currentOpacity%"
 
         selectedViewMinSize = minSize
 

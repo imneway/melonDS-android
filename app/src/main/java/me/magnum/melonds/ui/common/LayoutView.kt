@@ -63,6 +63,9 @@ open class LayoutView(context: Context, attrs: AttributeSet?) : FrameLayout(cont
             topMargin = layoutComponent.rect.y
         }
 
+        // 设置透明度
+        view.alpha = layoutComponent.opacity / 100f
+
         val viewLayoutComponent = LayoutComponentView(view, viewBuilder.getAspectRatio(), layoutComponent.component)
         if (layoutComponent.isScreen()) {
             // Screens should be below other views

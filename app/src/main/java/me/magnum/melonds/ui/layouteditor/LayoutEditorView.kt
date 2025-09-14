@@ -31,6 +31,8 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
     private var selectedView: LayoutComponentView? = null
     private var selectedViewAnchor = Anchor.TOP_LEFT
     private var modifiedByUser = false
+    private val componentOpacityMap = mutableMapOf<LayoutComponent, Int>()
+    private var globalOpacity = 50 // 默认全局透明度
 
     init {
         super.setOnClickListener {
@@ -44,6 +46,12 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
 
     override fun instantiateLayout(layoutConfiguration: UILayout) {
         super.instantiateLayout(layoutConfiguration)
+        // 初始化透明度映射
+        layoutConfiguration.components?.forEach { component ->
+            componentOpacityMap[component.component] = component.opacity
+        }
+        // 获取全局透明度设置
+        updateGlobalOpacity()
         modifiedByUser = false
     }
 
@@ -58,7 +66,9 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
     fun addLayoutComponent(component: LayoutComponent) {
         val componentBuilder = viewBuilderFactory.getLayoutComponentViewBuilder(component)
         val componentHeight = defaultComponentWidth / componentBuilder.getAspectRatio()
-        val componentView = addPositionedLayoutComponent(PositionedLayoutComponent(Rect(0, 0, defaultComponentWidth, componentHeight.toInt()), component))
+        // 新添加的控件默认透明度为 100%
+        componentOpacityMap[component] = 100
+        val componentView = addPositionedLayoutComponent(PositionedLayoutComponent(Rect(0, 0, defaultComponentWidth, componentHeight.toInt()), component, 100))
         views[component] = componentView
         modifiedByUser = true
     }
@@ -68,7 +78,10 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
     }
 
     fun buildCurrentLayout(): List<PositionedLayoutComponent> {
-        return views.values.map { PositionedLayoutComponent(it.getRect(), it.component) }
+        return views.values.map { 
+            val opacity = componentOpacityMap[it.component] ?: 100
+            PositionedLayoutComponent(it.getRect(), it.component, opacity)
+        }
     }
 
     fun handleKeyDown(event: KeyEvent): Boolean {
@@ -92,7 +105,9 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
     override fun onLayoutComponentViewAdded(layoutComponentView: LayoutComponentView) {
         super.onLayoutComponentViewAdded(layoutComponentView)
         setupDragHandler(layoutComponentView)
-        layoutComponentView.view.alpha = 0.5f
+        // 在编辑界面中，未选中的控件显示为半透明，选中的控件显示为不透明
+        // 但实际保存的透明度值不受影响
+        updateViewAlphaForEditor(layoutComponentView)
     }
 
     private fun setupDragHandler(layoutComponentView: LayoutComponentView) {
@@ -162,16 +177,19 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         selectedViewAnchor = anchor
         selectedView = view
 
+        // 更新所有控件的显示透明度
+        views.values.forEach { updateViewAlphaForEditor(it) }
+
         val layoutAspectRatio = width / height.toFloat()
         val selectedViewAspectRatio = view.aspectRatio
         val currentConstrainedDimension: Int
         val maxDimension: Int
 
         if (layoutAspectRatio > selectedViewAspectRatio) {
-            maxDimension = height
+            maxDimension = height / 2  // 将最大值改为原来的一半
             currentConstrainedDimension = view.getHeight()
         } else {
-            maxDimension = width
+            maxDimension = width / 2   // 将最大值改为原来的一半
             currentConstrainedDimension = view.getWidth()
         }
 
@@ -181,7 +199,7 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
 
     private fun deselectCurrentView() {
         selectedView?.let {
-            it.view.alpha = 0.5f
+            updateViewAlphaForEditor(it)
             onViewDeselectedListener?.invoke(it)
         }
         selectedView = null
@@ -211,13 +229,15 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         val newViewHeight: Int
 
         if (screenAspectRatio > selectedViewAspectRatio) {
-            // The scale range must go from minComponentSize to height
-            val scaledHeight = ((height - minComponentSize) * newScale + minComponentSize).roundToInt()
+            // The scale range must go from minComponentSize to height/2
+            val maxHeight = height / 2
+            val scaledHeight = ((maxHeight - minComponentSize) * newScale + minComponentSize).roundToInt()
             newViewWidth = (scaledHeight * selectedViewAspectRatio).toInt()
             newViewHeight = scaledHeight
         } else {
-            // The scale range must go from minComponentSize to width
-            val scaledWidth = ((width - minComponentSize) * newScale + minComponentSize).roundToInt()
+            // The scale range must go from minComponentSize to width/2
+            val maxWidth = width / 2
+            val scaledWidth = ((maxWidth - minComponentSize) * newScale + minComponentSize).roundToInt()
             newViewWidth = scaledWidth
             newViewHeight = (scaledWidth / selectedViewAspectRatio).toInt()
         }
@@ -265,5 +285,50 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         }
         currentlySelectedView.setPositionAndSize(Point(viewX, viewY), newViewWidth, newViewHeight)
         modifiedByUser = true
+    }
+
+    fun setSelectedViewOpacity(opacity: Int) {
+        val currentlySelectedView = selectedView ?: return
+        // 允许透明度从 0% 到 100%
+        // 保存透明度值到映射中
+        componentOpacityMap[currentlySelectedView.component] = opacity
+        // 立即更新显示
+        updateViewAlphaForEditor(currentlySelectedView)
+        modifiedByUser = true
+    }
+
+    fun getSelectedViewOpacity(): Int {
+        val currentlySelectedView = selectedView ?: return 100
+        // 返回实际保存的透明度值
+        return componentOpacityMap[currentlySelectedView.component] ?: 100
+    }
+
+    private fun updateViewAlphaForEditor(layoutComponentView: LayoutComponentView) {
+        // 在编辑界面中，显示最终透明度（全局透明度 × 控件独立透明度），但选中的控件稍微亮一些以便识别
+        val componentOpacity = componentOpacityMap[layoutComponentView.component] ?: 100
+        val globalAlpha = globalOpacity / 100f
+        val componentAlpha = componentOpacity / 100f
+        val finalAlpha = globalAlpha * componentAlpha
+        
+        if (selectedView == layoutComponentView) {
+            // 选中的控件稍微亮一些，但不超过 1.0f
+            layoutComponentView.view.alpha = min(1.0f, finalAlpha + 0.2f)
+        } else {
+            // 未选中的控件显示最终透明度
+            layoutComponentView.view.alpha = finalAlpha
+        }
+    }
+
+    private fun updateGlobalOpacity() {
+        // 获取全局透明度设置
+        try {
+            // 这里我们需要同步获取全局透明度，因为这是一个简单的设置值
+            // 我们可以通过 SharedPreferences 直接获取
+            val sharedPrefs = context.getSharedPreferences("me.magnum.melonds_preferences", Context.MODE_PRIVATE)
+            globalOpacity = sharedPrefs.getInt("input_opacity", 50)
+        } catch (e: Exception) {
+            // 如果获取失败，使用默认值
+            globalOpacity = 50
+        }
     }
 }

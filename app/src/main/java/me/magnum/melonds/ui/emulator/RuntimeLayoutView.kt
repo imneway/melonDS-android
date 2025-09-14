@@ -102,7 +102,13 @@ class RuntimeLayoutView(context: Context, attrs: AttributeSet?) : LayoutView(con
                 if (!it.component.isScreen()) {
                     it.view.apply {
                         visibility = View.VISIBLE
-                        alpha = inputAlpha
+                        // 计算最终透明度：全局透明度 × 控件独立透明度
+                        val globalOpacity = currentRuntimeLayout.softInputOpacity / 100f
+                        val componentOpacity = currentRuntimeLayout.layout.components?.find { component -> 
+                            component.component == it.component 
+                        }?.opacity ?: 100
+                        val finalOpacity = globalOpacity * (componentOpacity / 100f)
+                        alpha = finalOpacity
                     }
                 }
             }

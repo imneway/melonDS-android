@@ -9,6 +9,8 @@ data class PositionedLayoutComponentDto(
     val rect: RectDto,
     @SerializedName("component")
     val component: String,
+    @SerializedName("opacity")
+    val opacity: Int = 100,
 ) {
 
     companion object {
@@ -16,11 +18,12 @@ data class PositionedLayoutComponentDto(
             return PositionedLayoutComponentDto(
                 RectDto.fromModel(positionedLayoutComponent.rect),
                 positionedLayoutComponent.component.name,
+                positionedLayoutComponent.opacity,
             )
         }
     }
 
     fun toModel(): PositionedLayoutComponent {
-        return PositionedLayoutComponent(rect.toModel(), enumValueOfIgnoreCase(component))
+        return PositionedLayoutComponent(rect.toModel(), enumValueOfIgnoreCase(component), opacity)
     }
 }
