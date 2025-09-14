@@ -201,6 +201,9 @@ class EmulatorViewModel @Inject constructor(
                 }
                 _emulatorState.value = EmulatorState.RunningRom(rom)
                 startTrackingFps()
+                
+                // 自动加载最新存档
+                doAutoLoad()
             }
         }
     }
@@ -487,6 +490,32 @@ class EmulatorViewModel @Inject constructor(
             }
             is EmulatorState.RunningFirmware -> {
                 // 固件模式下不进行自动存档
+            }
+            else -> {
+                // Do nothing
+            }
+        }
+    }
+
+    fun doAutoLoad() {
+        val currentState = _emulatorState.value
+        when (currentState) {
+            is EmulatorState.RunningRom -> {
+                if (emulatorSession.areSaveStateLoadsAllowed()) {
+                    sessionCoroutineScope.launch {
+                        emulatorManager.pauseEmulator()
+                        val latestSlot = saveStatesRepository.getRomLatestSaveStateSlot(currentState.rom)
+                        if (latestSlot != null && loadRomState(currentState.rom, latestSlot)) {
+                            _toastEvent.emit(ToastEvent.AutoLoadSuccessful)
+                        }
+                        emulatorManager.resumeEmulator()
+                    }
+                } else {
+                    _toastEvent.tryEmit(ToastEvent.CannotUseSaveStatesWhenRAHardcoreIsEnabled)
+                }
+            }
+            is EmulatorState.RunningFirmware -> {
+                _toastEvent.tryEmit(ToastEvent.CannotLoadStateWhenRunningFirmware)
             }
             else -> {
                 // Do nothing

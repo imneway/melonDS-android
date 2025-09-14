@@ -54,6 +54,13 @@ class FileSystemSaveStatesRepository(
         return result
     }
 
+    override fun getRomLatestSaveStateSlot(rom: Rom): SaveStateSlot? {
+        val allSlots = getRomSaveStates(rom)
+        return allSlots
+            .filter { it.exists && it.lastUsedDate != null }
+            .maxByOrNull { it.lastUsedDate!! }
+    }
+
     override fun getRomQuickSaveStateSlot(rom: Rom): SaveStateSlot {
         val quickSaveStateDocument = getRomQuickSaveStateDocument(rom)
         val saveStateExists = quickSaveStateDocument != null

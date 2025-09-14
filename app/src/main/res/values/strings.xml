@@ -149,6 +149,7 @@
     <string name="saved">Saved</string>
     <string name="loaded">Loaded</string>
     <string name="auto_saved">Auto saved</string>
+    <string name="auto_loaded">Auto loaded latest save</string>
     <string name="title_activity_settings">Settings</string>
     <string name="category_general">General</string>
     <string name="category_general_summary">Theme, generic settings</string>
