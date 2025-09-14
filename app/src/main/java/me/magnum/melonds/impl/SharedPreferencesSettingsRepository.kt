@@ -173,6 +173,10 @@ class SharedPreferencesSettingsRepository(
         return preferences.getBoolean("enable_sustained_performance", false)
     }
 
+    override fun areHotCornersEnabled(): Boolean {
+        return preferences.getBoolean("enable_hot_corners", true)
+    }
+
     override fun getRomSearchDirectories(): Array<Uri> {
         val dirPreference = preferences.getStringSet("rom_search_dirs", emptySet())
         return dirPreference?.map { it.toUri() }?.toTypedArray() ?: emptyArray()

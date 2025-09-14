@@ -15,6 +15,11 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
+    <me.magnum.melonds.ui.emulator.HotCornerView
+            android:id="@+id/hotCornerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
     <androidx.compose.ui.platform.ComposeView
             android:id="@+id/layout_achievement"
             android:layout_width="match_parent"

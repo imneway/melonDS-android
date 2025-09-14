@@ -42,4 +42,11 @@
             android:summary="@string/sustained_performance_mode_summary"
             app:iconSpaceReserved="false"
             android:defaultValue="false" />
+
+    <SwitchPreference
+            android:key="enable_hot_corners"
+            android:title="@string/hot_corners"
+            android:summary="@string/hot_corners_summary"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
 </PreferenceScreen>

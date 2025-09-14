@@ -194,6 +194,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         setupInputHandling()
         setupSustainedPerformanceMode()
         setupFpsCounter()
+        updateHotCornerState()
         viewModel.resumeEmulator()
     }
     private val cheatsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -263,6 +264,9 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
             setFrontendInputHandler(frontendInputHandler)
             setSystemInputHandler(melonTouchHandler)
         }
+
+        // 设置热区回调
+        setupHotCorners()
 
         val layoutChangeListener = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             updateRendererScreenAreas()
@@ -697,6 +701,38 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
 
     private fun setupInputHandling() {
         nativeInputListener = InputProcessor(settingsRepository.getControllerConfiguration(), melonTouchHandler, frontendInputHandler)
+    }
+
+    private fun setupHotCorners() {
+        binding.hotCornerView.setHotCornerCallback(object : HotCornerView.HotCornerCallback {
+            override fun onTopLeftClicked() {
+                // 快速保存
+                viewModel.doQuickSave()
+            }
+
+            override fun onTopRightClicked() {
+                // 快速读取存档
+                viewModel.doQuickLoad()
+            }
+
+            override fun onBottomLeftClicked() {
+                // 加速
+                frontendInputHandler.onFastForwardPressed()
+            }
+
+            override fun onBottomRightClicked() {
+                // 暂停
+                frontendInputHandler.onPausePressed()
+            }
+        })
+        
+        // 设置初始热区状态
+        updateHotCornerState()
+    }
+    
+    private fun updateHotCornerState() {
+        val hotCornersEnabled = settingsRepository.areHotCornersEnabled()
+        binding.hotCornerView.setHotCornersEnabled(hotCornersEnabled)
     }
 
     private fun handleBackPressed() {
