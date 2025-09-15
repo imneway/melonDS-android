@@ -440,6 +440,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
                 viewModel.uiEvent.collectLatest {
                     when (it) {
                         EmulatorUiEvent.CloseEmulator -> {
+                            android.util.Log.d("EmulatorActivity", "CloseEmulator event received")
                             Choreographer.getInstance().removeFrameCallback(this@EmulatorActivity)
                             finish()
                         }
@@ -897,9 +898,11 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         enableScreenTimeOut()
         Choreographer.getInstance().removeFrameCallback(this)
         viewModel.pauseEmulator(false)
-        
-        // 自动存档到Auto Save Slot
-        viewModel.doAutoSave()
+
+        // 正在退出时不触发自动存档，避免与退出流程并发
+        if (!viewModel.isExitInProgress()) {
+            viewModel.doAutoSave()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -910,9 +913,20 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
     override fun onDestroy() {
         super.onDestroy()
         
-        // 应用退出时自动存档
-        viewModel.doAutoSave()
+        android.util.Log.d("EmulatorActivity", "onDestroy called")
+        
+        // 正在退出时不触发自动存档
+        if (!viewModel.isExitInProgress()) {
+            try {
+                viewModel.doAutoSave()
+                android.util.Log.d("EmulatorActivity", "Auto save triggered in onDestroy")
+            } catch (e: Exception) {
+                android.util.Log.e("EmulatorActivity", "Failed to trigger auto save in onDestroy", e)
+            }
+        }
         
         binding.surfaceMain.stop()
+        
+        android.util.Log.d("EmulatorActivity", "onDestroy completed")
     }
 }

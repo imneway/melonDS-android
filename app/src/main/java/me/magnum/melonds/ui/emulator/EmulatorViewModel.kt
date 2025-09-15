@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.rx2.asFlow
 import kotlinx.coroutines.rx2.awaitSingleOrNull
 import kotlinx.coroutines.rx2.rxMaybe
@@ -103,6 +104,9 @@ class EmulatorViewModel @Inject constructor(
 
     private val sessionCoroutineScope = EmulatorSessionCoroutineScope()
     private var raSessionJob: Job? = null
+
+    private val _exitInProgress = MutableStateFlow(false)
+    fun isExitInProgress(): Boolean = _exitInProgress.value
 
     private val _emulatorState = MutableStateFlow<EmulatorState>(EmulatorState.Uninitialized)
     val emulatorState = _emulatorState.asStateFlow()
@@ -350,10 +354,31 @@ class EmulatorViewModel @Inject constructor(
                     RomPauseMenuOption.VIEW_ACHIEVEMENTS -> _uiEvent.tryEmit(EmulatorUiEvent.ShowAchievementList)
                     RomPauseMenuOption.RESET -> resetEmulator()
                     RomPauseMenuOption.EXIT -> {
-                        // 退出游戏时自动存档
-                        doAutoSave()
-                        emulatorManager.stopEmulator()
-                        _uiEvent.tryEmit(EmulatorUiEvent.CloseEmulator)
+                        android.util.Log.d("EmulatorViewModel", "EXIT option selected, starting exit process")
+                        // 标记正在退出，避免 onPause 再次触发自动存档
+                        _exitInProgress.value = true
+
+                        // 顺序执行：先自动存档，完成后再停止并关闭
+                        sessionCoroutineScope.launch {
+                            try {
+                                val currentState = _emulatorState.value
+                                if (currentState is EmulatorState.RunningRom) {
+                                    emulatorManager.pauseEmulator()
+                                    val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
+                                    val saved = saveRomState(currentState.rom, autoSaveSlot)
+                                    if (saved) {
+                                        _toastEvent.tryEmit(ToastEvent.AutoSaveSuccessful)
+                                    }
+                                    // 不再恢复，直接退出
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("EmulatorViewModel", "Auto save failed during exit", e)
+                            } finally {
+                                emulatorManager.stopEmulator()
+                                _uiEvent.tryEmit(EmulatorUiEvent.CloseEmulator)
+                                android.util.Log.d("EmulatorViewModel", "Exit process completed")
+                            }
+                        }
                     }
                 }
             }
@@ -486,6 +511,34 @@ class EmulatorViewModel @Inject constructor(
                         _toastEvent.emit(ToastEvent.AutoSaveSuccessful)
                     }
                     emulatorManager.resumeEmulator()
+                }
+            }
+            is EmulatorState.RunningFirmware -> {
+                // 固件模式下不进行自动存档
+            }
+            else -> {
+                // Do nothing
+            }
+        }
+    }
+
+    fun doAutoSaveSync() {
+        val currentState = _emulatorState.value
+        when (currentState) {
+            is EmulatorState.RunningRom -> {
+                // 使用 runBlocking 同步等待存档完成
+                runBlocking {
+                    try {
+                        emulatorManager.pauseEmulator()
+                        val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
+                        if (saveRomState(currentState.rom, autoSaveSlot)) {
+                            _toastEvent.tryEmit(ToastEvent.AutoSaveSuccessful)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("EmulatorViewModel", "Auto save failed during exit", e)
+                    } finally {
+                        // 注意：这里不调用 resumeEmulator()，因为我们要退出游戏
+                    }
                 }
             }
             is EmulatorState.RunningFirmware -> {
