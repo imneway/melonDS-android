@@ -186,10 +186,10 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         val maxDimension: Int
 
         if (layoutAspectRatio > selectedViewAspectRatio) {
-            maxDimension = height / 2  // 将最大值改为原来的一半
+            maxDimension = height
             currentConstrainedDimension = view.getHeight()
         } else {
-            maxDimension = width / 2   // 将最大值改为原来的一半
+            maxDimension = width
             currentConstrainedDimension = view.getWidth()
         }
 
@@ -229,14 +229,14 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         val newViewHeight: Int
 
         if (screenAspectRatio > selectedViewAspectRatio) {
-            // The scale range must go from minComponentSize to height/2
-            val maxHeight = height / 2
+            // The scale range must go from minComponentSize to height
+            val maxHeight = height
             val scaledHeight = ((maxHeight - minComponentSize) * newScale + minComponentSize).roundToInt()
             newViewWidth = (scaledHeight * selectedViewAspectRatio).toInt()
             newViewHeight = scaledHeight
         } else {
-            // The scale range must go from minComponentSize to width/2
-            val maxWidth = width / 2
+            // The scale range must go from minComponentSize to width
+            val maxWidth = width
             val scaledWidth = ((maxWidth - minComponentSize) * newScale + minComponentSize).roundToInt()
             newViewWidth = scaledWidth
             newViewHeight = (scaledWidth / selectedViewAspectRatio).toInt()
