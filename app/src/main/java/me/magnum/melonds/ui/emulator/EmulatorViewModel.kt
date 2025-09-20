@@ -656,7 +656,7 @@ class EmulatorViewModel @Inject constructor(
                 if (layout == null) {
                     RuntimeBackground.None
                 } else {
-                    loadBackground(layout.backgroundId, layout.backgroundMode)
+                    loadBackground(layout.backgroundId, layout.backgroundMode, layout.backgroundColor)
                 }
             }.collect(_background)
         }
@@ -699,12 +699,12 @@ class EmulatorViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadBackground(backgroundId: UUID?, mode: BackgroundMode): RuntimeBackground {
+    private suspend fun loadBackground(backgroundId: UUID?, mode: BackgroundMode, backgroundColor: String?): RuntimeBackground {
         return if (backgroundId == null) {
-            RuntimeBackground(null, mode)
+            RuntimeBackground(null, mode, backgroundColor)
         } else {
             val background = backgroundsRepository.getBackground(backgroundId)
-            RuntimeBackground(background, mode)
+            RuntimeBackground(background, mode, backgroundColor)
         }
     }
 

@@ -43,6 +43,7 @@ class Migration25to26(
         return UILayoutDto(
             uiLayout25.backgroundId,
             uiLayout25.backgroundMode,
+            null, // backgroundColor was not available in version 25
             uiLayout25.components.map {
                 PositionedLayoutComponentDto(
                     RectDto(it.rect.x, it.rect.y, it.rect.width, it.rect.height),

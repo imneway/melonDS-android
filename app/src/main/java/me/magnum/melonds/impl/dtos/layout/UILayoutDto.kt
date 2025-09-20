@@ -10,6 +10,8 @@ data class UILayoutDto(
     val backgroundId: String?,
     @SerializedName("backgroundMode")
     val backgroundMode: String,
+    @SerializedName("backgroundColor")
+    val backgroundColor: String?,
     @SerializedName("components")
     val components: List<PositionedLayoutComponentDto>?,
 ) {
@@ -19,6 +21,7 @@ data class UILayoutDto(
             return UILayoutDto(
                 uiLayout.backgroundId?.toString(),
                 uiLayout.backgroundMode.name,
+                uiLayout.backgroundColor,
                 uiLayout.components?.map {
                     PositionedLayoutComponentDto.fromModel(it)
                 },
@@ -30,6 +33,7 @@ data class UILayoutDto(
         return UILayout(
             backgroundId?.let { UUID.fromString(it) },
             enumValueOfIgnoreCase(backgroundMode),
+            backgroundColor,
             components?.map {
                 it.toModel()
             },

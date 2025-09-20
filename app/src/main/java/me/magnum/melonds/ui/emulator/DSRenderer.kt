@@ -2,6 +2,7 @@ package me.magnum.melonds.ui.emulator
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.opengl.GLES30
 import android.opengl.GLUtils
 import me.magnum.melonds.common.opengl.Shader
@@ -255,6 +256,8 @@ class DSRenderer(private val context: Context) {
             mustUpdateConfiguration = false
         }
 
+        // Set background color before clearing
+        setBackgroundClearColor()
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
         if (!presentFrameWrapper.isValidFrame) {
             return
@@ -509,6 +512,28 @@ class DSRenderer(private val context: Context) {
                             1f, -1f
                     )
                 }
+            }
+        }
+    }
+
+    private fun setBackgroundClearColor() {
+        synchronized(backgroundLock) {
+            val backgroundColor = background?.backgroundColor
+            if (backgroundColor != null) {
+                try {
+                    val color = Color.parseColor(backgroundColor)
+                    val red = Color.red(color) / 255f
+                    val green = Color.green(color) / 255f
+                    val blue = Color.blue(color) / 255f
+                    val alpha = Color.alpha(color) / 255f
+                    GLES30.glClearColor(red, green, blue, alpha)
+                } catch (e: IllegalArgumentException) {
+                    // Invalid color format, use default black
+                    GLES30.glClearColor(0f, 0f, 0f, 1f)
+                }
+            } else {
+                // No background color set, use default black
+                GLES30.glClearColor(0f, 0f, 0f, 1f)
             }
         }
     }

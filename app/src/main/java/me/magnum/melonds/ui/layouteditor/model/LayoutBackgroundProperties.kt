@@ -6,4 +6,5 @@ import java.util.UUID
 data class LayoutBackgroundProperties(
     val backgroundId: UUID?,
     val backgroundMode: BackgroundMode,
+    val backgroundColor: String?,
 )

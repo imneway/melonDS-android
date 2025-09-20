@@ -342,6 +342,9 @@
     <string name="background">Background</string>
     <string name="backgrounds">Backgrounds</string>
     <string name="background_mode">Background mode</string>
+    <string name="background_color">Background color</string>
+    <string name="background_color_hint">Enter hex color (e.g., #FF0000)</string>
+    <string name="background_color_invalid">Invalid color format</string>
     <string name="action_backgrounds_new">New background</string>
     <string name="background_name">Background name</string>
     <string name="background_deleted">Background deleted</string>
