@@ -18,8 +18,8 @@
     </style>
 
     <style name="SplashTheme" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splashBackground</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_splash</item>
+        <item name="windowSplashScreenBackground">@android:color/transparent</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_splash_with_background</item>
 
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>

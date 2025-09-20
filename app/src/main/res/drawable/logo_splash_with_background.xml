@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 渐变背景层 -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#36D21D"
+                android:endColor="#18C10C"
+                android:angle="270"
+                android:type="linear" />
+        </shape>
+    </item>
+    <!-- 图标层 -->
+    <item android:drawable="@drawable/logo_splash" />
+</layer-list>
