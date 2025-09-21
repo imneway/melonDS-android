@@ -20,9 +20,6 @@ import me.magnum.melonds.R
 import me.magnum.melonds.databinding.DialogLayoutBackgroundsBinding
 import me.magnum.melonds.domain.model.layout.BackgroundMode
 import me.magnum.melonds.ui.backgrounds.BackgroundsActivity
-import me.magnum.melonds.ui.common.TextInputDialog
-import android.graphics.Color
-import android.widget.Toast
 import java.util.UUID
 
 @AndroidEntryPoint
@@ -53,7 +50,6 @@ class LayoutBackgroundDialog : DialogFragment() {
                     it?.let {
                         onBackgroundSelected(it.backgroundId)
                         onBackgroundModeSelected(it.backgroundMode)
-                        onBackgroundColorSelected(it.backgroundColor)
                     }
                 }
             }
@@ -98,22 +94,6 @@ class LayoutBackgroundDialog : DialogFragment() {
                 }
                 .show()
         }
-        
-        binding.layoutBackgroundColor.setOnClickListener {
-            val currentColor = viewModel.layoutBackgroundProperties.value?.backgroundColor ?: "#000000"
-            TextInputDialog.Builder()
-                .setTitle(getString(R.string.background_color))
-                .setText(currentColor)
-                .setOnConfirmListener { colorText ->
-                    if (isValidHexColor(colorText)) {
-                        viewModel.setBackgroundPropertiesBackgroundColor(colorText)
-                    } else {
-                        Toast.makeText(requireContext(), getString(R.string.background_color_invalid), Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .build()
-                .show(parentFragmentManager, "background_color_dialog")
-        }
 
         binding.buttonBackgroundConfigOk.setOnClickListener {
             viewModel.saveBackgroundToCurrentConfiguration()
@@ -143,18 +123,5 @@ class LayoutBackgroundDialog : DialogFragment() {
     private fun onBackgroundModeSelected(mode: BackgroundMode) {
         val modeNames = requireContext().resources.getStringArray(R.array.background_portrait_mode_options)
         binding.textBackgroundMode.text = modeNames[BackgroundMode.entries.indexOf(mode)]
-    }
-
-    private fun onBackgroundColorSelected(color: String?) {
-        binding.textBackgroundColor.text = color ?: "#000000"
-    }
-
-    private fun isValidHexColor(color: String): Boolean {
-        return try {
-            Color.parseColor(color)
-            true
-        } catch (e: IllegalArgumentException) {
-            false
-        }
     }
 }

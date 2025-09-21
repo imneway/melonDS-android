@@ -85,29 +85,6 @@
                             tools:text="Fit center" />
                 </LinearLayout>
             </LinearLayout>
-
-            <LinearLayout
-                    android:id="@+id/layout_background_color"
-                    style="@style/Layout.RomSetting">
-
-                <LinearLayout
-                        style="@style/Layout.RomSettingContent">
-
-                    <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            style="@style/Text.RomSetting.Title"
-                            android:text="@string/background_color"/>
-
-                    <TextView
-                            android:id="@+id/text_background_color"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            style="@style/Text.RomSetting.Summary"
-                            android:singleLine="true"
-                            tools:text="#000000" />
-                </LinearLayout>
-            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 

@@ -51,7 +51,7 @@ class LayoutEditorViewModel @Inject constructor(
     val layoutBackgroundProperties by lazy {
         viewModelScope.launch {
             currentLayout.filterNotNull().map {
-                LayoutBackgroundProperties(it.layout.backgroundId, it.layout.backgroundMode, it.layout.backgroundColor)
+                LayoutBackgroundProperties(it.layout.backgroundId, it.layout.backgroundMode)
             }.collect(_layoutBackgroundProperties)
         }
         _layoutBackgroundProperties.asStateFlow()
@@ -90,12 +90,12 @@ class LayoutEditorViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            _currentLayout.distinctUntilChangedBy { it?.layout?.backgroundId to it?.layout?.backgroundMode to it?.layout?.backgroundColor }.collect {
+            _currentLayout.distinctUntilChangedBy { it?.layout?.backgroundId to it?.layout?.backgroundMode }.collect {
                 if (it != null) {
-                    loadBackground(it.layout.backgroundId, it.layout.backgroundMode, it.layout.backgroundColor)
+                    loadBackground(it.layout.backgroundId, it.layout.backgroundMode)
                 } else {
                     // Unload the background. The background mode doesn't matter
-                    loadBackground(null, BackgroundMode.FIT_CENTER, null)
+                    loadBackground(null, BackgroundMode.FIT_CENTER)
                 }
             }
         }
@@ -121,13 +121,13 @@ class LayoutEditorViewModel @Inject constructor(
         return backgroundsRepository.getBackground(backgroundId)?.name
     }
 
-    private fun loadBackground(backgroundId: UUID?, mode: BackgroundMode, backgroundColor: String?) {
+    private fun loadBackground(backgroundId: UUID?, mode: BackgroundMode) {
         if (backgroundId == null) {
-            _background.value = RuntimeBackground(null, mode, backgroundColor)
+            _background.value = RuntimeBackground(null, mode)
         } else {
             viewModelScope.launch {
                 val background = backgroundsRepository.getBackground(backgroundId)
-                _background.value = RuntimeBackground(background, mode, backgroundColor)
+                _background.value = RuntimeBackground(background, mode)
             }
         }
     }
@@ -199,12 +199,6 @@ class LayoutEditorViewModel @Inject constructor(
         }
     }
 
-    fun setBackgroundPropertiesBackgroundColor(backgroundColor: String?) {
-        _layoutBackgroundProperties.update {
-            it?.copy(backgroundColor = backgroundColor)
-        }
-    }
-
     fun saveBackgroundToCurrentConfiguration() {
         val currentVariant = currentLayoutVariant ?: return
         val currentBackgroundProperties = _layoutBackgroundProperties.value ?: return
@@ -213,16 +207,11 @@ class LayoutEditorViewModel @Inject constructor(
             layoutConfiguration?.copy(
                 layoutVariants = layoutConfiguration.layoutVariants.toMutableMap().apply {
                     val updatedLayout = if (containsKey(currentVariant)) {
-                        this[currentVariant]?.copy(
-                            backgroundId = currentBackgroundProperties.backgroundId, 
-                            backgroundMode = currentBackgroundProperties.backgroundMode,
-                            backgroundColor = currentBackgroundProperties.backgroundColor
-                        )
+                        this[currentVariant]?.copy(backgroundId = currentBackgroundProperties.backgroundId, backgroundMode = currentBackgroundProperties.backgroundMode)
                     } else {
                         UILayout(
                             backgroundId = currentBackgroundProperties.backgroundId,
                             backgroundMode = currentBackgroundProperties.backgroundMode,
-                            backgroundColor = currentBackgroundProperties.backgroundColor,
                             components = null,
                         )
                     }
@@ -237,7 +226,7 @@ class LayoutEditorViewModel @Inject constructor(
     fun resetBackgroundProperties() {
         val currentLayout = currentLayout.value?.layout
         _layoutBackgroundProperties.value = currentLayout?.let {
-            LayoutBackgroundProperties(currentLayout.backgroundId, currentLayout.backgroundMode, currentLayout.backgroundColor)
+            LayoutBackgroundProperties(currentLayout.backgroundId, currentLayout.backgroundMode)
         }
     }
 
