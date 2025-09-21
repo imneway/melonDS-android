@@ -133,7 +133,8 @@ class RuntimeLayoutView(context: Context, attrs: AttributeSet?) : LayoutView(con
             LayoutComponent.BOTTOM_SCREEN to LayoutComponent.TOP_SCREEN
         }
         systemInputHandler?.let {
-            getLayoutComponentView(touchScreenComponent)?.view?.setOnTouchListener(TouchscreenInputHandler(it))
+            val enableHapticFeedback = currentRuntimeLayout?.isHapticFeedbackEnabled ?: true
+            getLayoutComponentView(touchScreenComponent)?.view?.setOnTouchListener(TouchscreenInputHandler(it, enableHapticFeedback, touchVibrator))
         }
         getLayoutComponentView(nonTouchScreenComponent)?.view?.setOnTouchListener(null)
     }

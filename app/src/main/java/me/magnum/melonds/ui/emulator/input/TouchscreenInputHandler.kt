@@ -5,10 +5,11 @@ import android.view.MotionEvent
 import android.view.MotionEvent.PointerCoords
 import android.view.View
 import me.magnum.melonds.MelonEmulator.onScreenRelease
+import me.magnum.melonds.common.vibration.TouchVibrator
 import me.magnum.melonds.domain.model.Input
 import me.magnum.melonds.domain.model.Point
 
-class TouchscreenInputHandler(inputListener: IInputListener) : BaseInputHandler(inputListener) {
+class TouchscreenInputHandler(inputListener: IInputListener, enableHapticFeedback: Boolean, touchVibrator: TouchVibrator) : FeedbackInputHandler(inputListener, enableHapticFeedback, touchVibrator) {
     private val touchPoint: Point = Point()
 
     @SuppressLint("ClickableViewAccessibility")
@@ -17,6 +18,7 @@ class TouchscreenInputHandler(inputListener: IInputListener) : BaseInputHandler(
             MotionEvent.ACTION_DOWN -> {
                 inputListener.onKeyPress(Input.TOUCHSCREEN)
                 inputListener.onTouch(normalizeTouchCoordinates(event, v.width, v.height))
+                performHapticFeedback(v, HapticFeedbackType.KEY_PRESS)
             }
             MotionEvent.ACTION_MOVE -> {
                 inputListener.onTouch(normalizeTouchCoordinates(event, v.width, v.height))
@@ -24,6 +26,7 @@ class TouchscreenInputHandler(inputListener: IInputListener) : BaseInputHandler(
             MotionEvent.ACTION_UP -> {
                 inputListener.onKeyReleased(Input.TOUCHSCREEN)
                 onScreenRelease()
+                performHapticFeedback(v, HapticFeedbackType.KEY_RELEASE)
             }
         }
         return true
