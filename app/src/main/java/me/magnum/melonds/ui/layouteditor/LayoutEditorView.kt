@@ -303,6 +303,32 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         return componentOpacityMap[currentlySelectedView.component] ?: 100
     }
 
+    fun getSelectedViewPositionInDp(): String {
+        val currentlySelectedView = selectedView ?: return "0, 0"
+        val position = currentlySelectedView.getPosition()
+        val xDp = screenUnitsConverter.pixelsToDp(position.x.toFloat())
+        val yDp = screenUnitsConverter.pixelsToDp(position.y.toFloat())
+        return "${xDp.toInt()}, ${yDp.toInt()}"
+    }
+
+    fun moveSelectedViewInDp(dx: Int, dy: Int) {
+        val currentlySelectedView = selectedView ?: return
+        val dxPixels = screenUnitsConverter.dpToPixels(dx.toFloat())
+        val dyPixels = screenUnitsConverter.dpToPixels(dy.toFloat())
+        dragView(currentlySelectedView, dxPixels, dyPixels)
+    }
+
+    fun isSelectedViewInUpperHalf(): Boolean {
+        val currentlySelectedView = selectedView ?: return false
+        val position = currentlySelectedView.getPosition()
+        val viewCenterY = position.y + currentlySelectedView.getHeight() / 2
+        return viewCenterY < height / 2
+    }
+
+    fun hasSelectedView(): Boolean {
+        return selectedView != null
+    }
+
     private fun updateViewAlphaForEditor(layoutComponentView: LayoutComponentView) {
         // 在编辑界面中，显示最终透明度（全局透明度 × 控件独立透明度），但选中的控件稍微亮一些以便识别
         val componentOpacity = componentOpacityMap[layoutComponentView.component] ?: 100

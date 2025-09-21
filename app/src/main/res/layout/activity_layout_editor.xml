@@ -16,6 +16,7 @@
             android:layout_height="match_parent"
             android:focusable="false" />
 
+    <!-- 底部菜单（默认） -->
     <LinearLayout
             android:id="@+id/layout_scaling"
             android:layout_width="match_parent"
@@ -24,7 +25,8 @@
             android:orientation="vertical"
             android:background="#AFFF"
             android:clickable="true"
-            android:focusable="false">
+            android:focusable="false"
+            android:visibility="visible">
 
         <!-- 删除按钮 -->
         <LinearLayout
@@ -84,6 +86,82 @@
                     android:padding="8dp"
                     android:max="10000"
                     android:layout_gravity="center_vertical" />
+        </LinearLayout>
+
+        <!-- 坐标显示和方向移动控制行 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:text="@string/label_position"
+                    android:minWidth="80sp" />
+
+            <TextView
+                    android:id="@+id/text_position"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:minWidth="100sp"
+                    android:text="0, 0" />
+
+            <Space
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+            <Button
+                    android:id="@+id/button_move_up"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_up"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_down"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_down"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_left"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_left"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_right"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_right"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
         </LinearLayout>
 
         <!-- 透明度控制行 -->
@@ -151,5 +229,188 @@
                 android:layout_height="wrap_content"
                 android:text="@string/menu"
                 style="@style/Button.Editor" />
+    </LinearLayout>
+
+    <!-- 顶部菜单（动态显示） -->
+    <LinearLayout
+            android:id="@+id/layout_scaling_top"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:orientation="vertical"
+            android:background="#AFFF"
+            android:clickable="true"
+            android:focusable="false"
+            android:visibility="gone">
+
+        <!-- 删除按钮 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <Button
+                    android:id="@+id/button_delete_button_top"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="@string/delete"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp"
+                    android:textSize="12sp"
+                    android:minHeight="32dp"
+                    android:minWidth="0dp" />
+
+            <Space
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- 尺寸控制行 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:text="@string/label_size"
+                    android:minWidth="60sp" />
+
+            <TextView
+                    android:id="@+id/text_size_top"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:minWidth="50sp"
+                tools:text="1080" />
+
+            <SeekBar
+                    android:id="@+id/seek_bar_scaling_top"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:max="10000"
+                    android:layout_gravity="center_vertical" />
+        </LinearLayout>
+
+        <!-- 坐标显示和方向移动控制行 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:text="@string/label_position"
+                    android:minWidth="80sp" />
+
+            <TextView
+                    android:id="@+id/text_position_top"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:minWidth="100sp"
+                    android:text="0, 0" />
+
+            <Space
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+            <Button
+                    android:id="@+id/button_move_up_top"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_up"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_down_top"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_down"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_left_top"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_left"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:layout_marginEnd="4dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+
+            <Button
+                    android:id="@+id/button_move_right_top"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:text="@string/move_right"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_delete_background"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
+        </LinearLayout>
+
+        <!-- 透明度控制行 -->
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+            <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:text="Opacity"
+                    android:minWidth="60sp" />
+
+            <TextView
+                    android:id="@+id/text_opacity_top"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/textLayoutEditor"
+                    android:minWidth="50sp"
+                tools:text="100%" />
+
+            <SeekBar
+                    android:id="@+id/seek_bar_opacity_top"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:padding="8dp"
+                    android:max="100"
+                    android:progress="100"
+                    android:layout_gravity="center_vertical" />
+        </LinearLayout>
     </LinearLayout>
 </RelativeLayout>

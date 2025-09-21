@@ -69,7 +69,9 @@ class LayoutEditorActivity : AppCompatActivity() {
     private lateinit var handler: Handler
     private var areBottomControlsShown = true
     private var areScalingControlsShown = true
+    private var areTopScalingControlsShown = false
     private var selectedViewMinSize = 0
+    private var isMenuAtTop = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,6 +95,53 @@ class LayoutEditorActivity : AppCompatActivity() {
             binding.viewLayoutEditor.deleteSelectedView()
         }
 
+        // 设置方向移动按钮的点击事件
+        binding.buttonMoveUp.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(0, -1)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveDown.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(0, 1)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveLeft.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(-1, 0)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveRight.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(1, 0)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+
+        // 设置顶部菜单按钮的点击事件
+        binding.buttonDeleteButtonTop.setOnClickListener {
+            binding.viewLayoutEditor.deleteSelectedView()
+        }
+        binding.buttonMoveUpTop.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(0, -1)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveDownTop.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(0, 1)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveLeftTop.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(-1, 0)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+        binding.buttonMoveRightTop.setOnClickListener {
+            binding.viewLayoutEditor.moveSelectedViewInDp(1, 0)
+            updatePositionDisplay()
+            checkAndRepositionMenu()
+        }
+
         binding.viewLayoutEditor.setLayoutComponentViewBuilderFactory(EditorLayoutComponentViewBuilderFactory())
         binding.viewLayoutEditor.setOnClickListener {
             if (areBottomControlsShown)
@@ -102,10 +151,12 @@ class LayoutEditorActivity : AppCompatActivity() {
         }
         binding.viewLayoutEditor.setOnViewSelectedListener { _, scale, maxSize, minSize ->
             hideBottomControls()
-            showScalingControls(scale, maxSize, minSize)
+            determineAndShowMenu(scale, maxSize, minSize)
+            updatePositionDisplay()
         }
         binding.viewLayoutEditor.setOnViewDeselectedListener {
             hideScalingControls()
+            hideTopScalingControls()
         }
         binding.seekBarScaling.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -135,6 +186,35 @@ class LayoutEditorActivity : AppCompatActivity() {
             }
         })
 
+        // 顶部菜单的 SeekBar 监听器
+        binding.seekBarScalingTop.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val scale = progress / binding.seekBarScalingTop.max.toFloat()
+                binding.textSizeTop.text = ((binding.seekBarScalingTop.max - selectedViewMinSize) * scale + selectedViewMinSize).toInt().toString()
+                binding.viewLayoutEditor.scaleSelectedView(scale)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+        })
+
+        binding.seekBarOpacityTop.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                // 允许透明度从 0% 到 100%
+                binding.textOpacityTop.text = "$progress%"
+                binding.viewLayoutEditor.setSelectedViewOpacity(progress)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+        })
+
         binding.viewLayoutEditor.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val oldWith = oldRight - oldLeft
             val oldHeight = oldBottom - oldTop
@@ -150,6 +230,7 @@ class LayoutEditorActivity : AppCompatActivity() {
 
         setupFullscreen()
         hideScalingControls(false)
+        hideTopScalingControls(false)
         updateOrientation(resources.configuration)
 
         lifecycleScope.launch {
@@ -353,6 +434,98 @@ class LayoutEditorActivity : AppCompatActivity() {
         }
 
         areScalingControlsShown = false
+    }
+
+    private fun updatePositionDisplay() {
+        val position = binding.viewLayoutEditor.getSelectedViewPositionInDp()
+        binding.textPosition.text = position
+        binding.textPositionTop.text = position
+    }
+
+    private fun determineAndShowMenu(scale: Float, maxSize: Int, minSize: Int) {
+        val isInUpperHalf = binding.viewLayoutEditor.isSelectedViewInUpperHalf()
+        
+        if (isInUpperHalf) {
+            // 控件在上半部分，菜单显示在底部
+            hideTopScalingControls()
+            showScalingControls(scale, maxSize, minSize)
+            isMenuAtTop = false
+        } else {
+            // 控件在下半部分，菜单显示在顶部
+            hideScalingControls()
+            showTopScalingControls(scale, maxSize, minSize)
+            isMenuAtTop = true
+        }
+    }
+
+    private fun showTopScalingControls(currentScale: Float, maxSize: Int, minSize: Int, animate: Boolean = true) {
+        binding.seekBarScalingTop.apply {
+            max = maxSize
+            progress = (currentScale * maxSize).toInt()
+        }
+
+        // 设置透明度控制
+        val currentOpacity = binding.viewLayoutEditor.getSelectedViewOpacity()
+        binding.seekBarOpacityTop.progress = currentOpacity
+        binding.textOpacityTop.text = "$currentOpacity%"
+
+        selectedViewMinSize = minSize
+
+        if (areTopScalingControlsShown) {
+            return
+        }
+
+        if (animate) {
+            binding.layoutScalingTop
+                .animate()
+                .y(0f)
+                .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
+                .withStartAction {
+                    binding.layoutScalingTop.isVisible = true
+                }
+                .start()
+        } else {
+            binding.layoutScalingTop.isVisible = true
+        }
+
+        areTopScalingControlsShown = true
+    }
+
+    private fun hideTopScalingControls(animate: Boolean = true) {
+        if (!areTopScalingControlsShown) {
+            return
+        }
+
+        if (animate) {
+            binding.layoutScalingTop
+                .animate()
+                .y(-binding.layoutScalingTop.height.toFloat())
+                .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
+                .withEndAction {
+                    binding.layoutScalingTop.isGone = true
+                }
+                .start()
+        } else {
+            binding.layoutScalingTop.isGone = true
+        }
+
+        areTopScalingControlsShown = false
+    }
+
+    private fun checkAndRepositionMenu() {
+        if (binding.viewLayoutEditor.hasSelectedView()) {
+            val isInUpperHalf = binding.viewLayoutEditor.isSelectedViewInUpperHalf()
+            
+            // 如果控件位置发生了变化，需要重新定位菜单
+            if ((isInUpperHalf && isMenuAtTop) || (!isInUpperHalf && !isMenuAtTop)) {
+                // 需要切换菜单位置
+                val currentScale = binding.seekBarScaling.progress / binding.seekBarScaling.max.toFloat()
+                val maxSize = binding.seekBarScaling.max
+                val minSize = selectedViewMinSize
+                
+                determineAndShowMenu(currentScale, maxSize, minSize)
+            }
+        }
     }
 
     private fun openButtonsMenu() {

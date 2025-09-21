@@ -326,6 +326,11 @@
     <string name="no_more_components">No more components to add</string>
     <string name="label_size">Size:</string>
     <string name="label_opacity">Component Opacity:</string>
+    <string name="label_position">Position (dp):</string>
+    <string name="move_up">↑</string>
+    <string name="move_down">↓</string>
+    <string name="move_left">←</string>
+    <string name="move_right">→</string>
     <string name="menu">Menu</string>
     <string name="properties">Properties</string>
     <string name="revert_changes">Revert changes</string>
