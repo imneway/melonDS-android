@@ -43,6 +43,7 @@ class RomListActivity : AppCompatActivity() {
     companion object {
         private const val FRAGMENT_ROM_LIST = "ROM_LIST"
         private const val FRAGMENT_NO_ROM_DIRECTORIES = "NO_ROM_DIRECTORY"
+        private const val STATE_HAS_AUTO_LAUNCHED = "state_has_auto_launched"
     }
 
     @Inject lateinit var markwon: Markwon
@@ -76,6 +77,9 @@ class RomListActivity : AppCompatActivity() {
 
     private var selectedRom: Rom? = null
     private var selectedFirmwareConsole: ConsoleType? = null
+    private var hasAutoLaunched: Boolean = false
+    private var hasRomSearchDirectories: Boolean = false
+    private var latestRomsSnapshot: List<Rom>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -83,14 +87,18 @@ class RomListActivity : AppCompatActivity() {
         val binding = ActivityRomListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        hasAutoLaunched = savedInstanceState?.getBoolean(STATE_HAS_AUTO_LAUNCHED, false) ?: false
+
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.hasSearchDirectories.collectLatest { hasDirectories ->
+                    hasRomSearchDirectories = hasDirectories
                     if (hasDirectories) {
                         addRomListFragment()
                     } else {
                         addNoSearchDirectoriesFragment()
                     }
+                    maybeAutoLaunchMostRecentRom()
                 }
             }
         }
@@ -120,6 +128,20 @@ class RomListActivity : AppCompatActivity() {
                 }
             }
         }
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.roms.collectLatest { roms ->
+                    latestRomsSnapshot = roms
+                    maybeAutoLaunchMostRecentRom()
+                }
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_HAS_AUTO_LAUNCHED, hasAutoLaunched)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -214,6 +236,26 @@ class RomListActivity : AppCompatActivity() {
             }
         }
         romListFragment.setRomSelectedListener { rom -> loadRom(rom) }
+    }
+
+    private fun maybeAutoLaunchMostRecentRom() {
+        if (hasAutoLaunched) return
+        if (!hasRomSearchDirectories) return
+        val roms = latestRomsSnapshot ?: return
+        if (roms.isEmpty()) return
+
+        val recentRom = roms
+            .asSequence()
+            .filter { it.lastPlayed != null && !it.isDsiWareTitle }
+            .maxByOrNull { it.lastPlayed!! }
+            ?: return
+
+        val configurationDirResult = viewModel.getRomConfigurationDirStatus(recentRom)
+        if (configurationDirResult.status == ConfigurationDirResult.Status.VALID) {
+            hasAutoLaunched = true
+            val intent = EmulatorActivity.getRomEmulatorActivityIntent(this, recentRom)
+            startActivity(intent)
+        }
     }
 
     private fun showProdUpdateAvailableDialog(update: AppUpdate) {
