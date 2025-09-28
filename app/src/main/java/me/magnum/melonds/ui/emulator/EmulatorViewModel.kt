@@ -500,17 +500,22 @@ class EmulatorViewModel @Inject constructor(
         }
     }
 
-    fun doAutoSave() {
+    fun doAutoSave(resumeAfterSave: Boolean = true) {
         val currentState = _emulatorState.value
         when (currentState) {
             is EmulatorState.RunningRom -> {
                 sessionCoroutineScope.launch {
-                    emulatorManager.pauseEmulator()
-                    val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
-                    if (saveRomState(currentState.rom, autoSaveSlot)) {
-                        _toastEvent.emit(ToastEvent.AutoSaveSuccessful)
+                    try {
+                        emulatorManager.pauseEmulator()
+                        val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
+                        if (saveRomState(currentState.rom, autoSaveSlot)) {
+                            _toastEvent.emit(ToastEvent.AutoSaveSuccessful)
+                        }
+                    } finally {
+                        if (resumeAfterSave) {
+                            emulatorManager.resumeEmulator()
+                        }
                     }
-                    emulatorManager.resumeEmulator()
                 }
             }
             is EmulatorState.RunningFirmware -> {

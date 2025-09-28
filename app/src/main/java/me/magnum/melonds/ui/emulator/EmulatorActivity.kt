@@ -905,7 +905,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
 
         // 正在退出时不触发自动存档，避免与退出流程并发
         if (!viewModel.isExitInProgress()) {
-            viewModel.doAutoSave()
+            viewModel.doAutoSave(resumeAfterSave = false)
         }
     }
 
@@ -922,7 +922,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         // 正在退出时不触发自动存档
         if (!viewModel.isExitInProgress()) {
             try {
-                viewModel.doAutoSave()
+                viewModel.doAutoSave(resumeAfterSave = false)
                 android.util.Log.d("EmulatorActivity", "Auto save triggered in onDestroy")
             } catch (e: Exception) {
                 android.util.Log.e("EmulatorActivity", "Failed to trigger auto save in onDestroy", e)
