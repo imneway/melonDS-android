@@ -24,9 +24,11 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
         fun onTopRightClicked()
         fun onBottomLeftClicked()
         fun onBottomRightClicked()
+        fun onHotCornerReleased()
     }
     
     private var hotCornerCallback: HotCornerCallback? = null
+    private var pressedInHotCorner = false
     
     init {
         // 将dp转换为px
@@ -58,26 +60,39 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
             return false
         }
         
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            val x = event.x
-            val y = event.y
-            
-            // 检查点击是否在热区内
-            when {
-                isInTopLeftHotCorner(x, y) -> {
-                    hotCornerCallback?.onTopLeftClicked()
-                    return true
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                val x = event.x
+                val y = event.y
+                // 检查点击是否在热区内
+                when {
+                    isInTopLeftHotCorner(x, y) -> {
+                        pressedInHotCorner = true
+                        hotCornerCallback?.onTopLeftClicked()
+                        return true
+                    }
+                    isInTopRightHotCorner(x, y) -> {
+                        pressedInHotCorner = true
+                        hotCornerCallback?.onTopRightClicked()
+                        return true
+                    }
+                    isInBottomLeftHotCorner(x, y) -> {
+                        pressedInHotCorner = true
+                        hotCornerCallback?.onBottomLeftClicked()
+                        return true
+                    }
+                    isInBottomRightHotCorner(x, y) -> {
+                        pressedInHotCorner = true
+                        hotCornerCallback?.onBottomRightClicked()
+                        return true
+                    }
+                    else -> pressedInHotCorner = false
                 }
-                isInTopRightHotCorner(x, y) -> {
-                    hotCornerCallback?.onTopRightClicked()
-                    return true
-                }
-                isInBottomLeftHotCorner(x, y) -> {
-                    hotCornerCallback?.onBottomLeftClicked()
-                    return true
-                }
-                isInBottomRightHotCorner(x, y) -> {
-                    hotCornerCallback?.onBottomRightClicked()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                if (pressedInHotCorner) {
+                    pressedInHotCorner = false
+                    hotCornerCallback?.onHotCornerReleased()
                     return true
                 }
             }

@@ -10,6 +10,10 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -178,10 +182,12 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         }
 
         override fun onQuickSave() {
+            vibrateClick()
             viewModel.doQuickSave()
         }
 
         override fun onQuickLoad() {
+            vibrateClick()
             viewModel.doQuickLoad()
         }
 
@@ -714,27 +720,64 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         binding.hotCornerView.setHotCornerCallback(object : HotCornerView.HotCornerCallback {
             override fun onTopLeftClicked() {
                 // 快速保存
+                vibrateClick()
                 viewModel.doQuickSave()
             }
 
             override fun onTopRightClicked() {
                 // 快速读取存档
+                vibrateClick()
                 viewModel.doQuickLoad()
             }
 
             override fun onBottomLeftClicked() {
                 // 加速
+                vibrateClick()
                 frontendInputHandler.onFastForwardPressed()
             }
 
             override fun onBottomRightClicked() {
                 // 暂停
+                vibrateClick()
                 frontendInputHandler.onPausePressed()
+            }
+
+            override fun onHotCornerReleased() {
+                vibrateClick()
             }
         })
         
         // 设置初始热区状态
         updateHotCornerState()
+    }
+
+    // 触摸震动开关的当前值（默认开启以与系统保持一致）
+    private var isTouchHapticsEnabled = true
+
+    private fun vibrateClick() {
+        if (!isTouchHapticsEnabled) return
+
+        try {
+            if (Build.VERSION.SDK_INT >= 31) {
+                val vibratorManager = getSystemService(VibratorManager::class.java)
+                val vibrator = vibratorManager?.defaultVibrator
+                if (Build.VERSION.SDK_INT >= 29) {
+                    vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                } else if (Build.VERSION.SDK_INT >= 26) {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                if (Build.VERSION.SDK_INT >= 29) {
+                    vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+                } else if (Build.VERSION.SDK_INT >= 26) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+                }
+            }
+        } catch (_: Throwable) {
+            // 忽略震动失败（设备无振动器或权限问题）
+        }
     }
     
     private fun updateHotCornerState() {
