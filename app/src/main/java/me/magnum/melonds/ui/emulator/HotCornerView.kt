@@ -6,17 +6,29 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import me.magnum.melonds.R
 
 class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     
     // 热区大小（dp）
     private val hotCornerSizeDp = 75f
+    private val indicatorSizeDp = 32f
+    private val indicatorMarginDp = 16f
     
     // 热区大小（像素）
     private var hotCornerSizePx = 0f
+    private var indicatorSizePx = 0f
+    private var indicatorMarginPx = 0f
     
     // 热区是否启用
     private var hotCornersEnabled = true
+
+    private var showFastForwardIndicator = false
+    private val fastForwardIndicatorDrawable = ContextCompat.getDrawable(context, R.drawable.ic_fast_forward_indicator)?.let {
+        DrawableCompat.wrap(it.mutate())
+    }
     
     // 热区回调接口
     interface HotCornerCallback {
@@ -37,23 +49,51 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
             hotCornerSizeDp,
             context.resources.displayMetrics
         )
+        indicatorSizePx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            indicatorSizeDp,
+            context.resources.displayMetrics
+        )
+        indicatorMarginPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            indicatorMarginDp,
+            context.resources.displayMetrics
+        )
     }
-    
+
     fun setHotCornerCallback(callback: HotCornerCallback?) {
         hotCornerCallback = callback
     }
-    
+
     fun setHotCornersEnabled(enabled: Boolean) {
         hotCornersEnabled = enabled
         // 当禁用时，设置View为不可见，这样就不会遮挡屏幕按键
         visibility = if (enabled) View.VISIBLE else View.GONE
+        if (!enabled && showFastForwardIndicator) {
+            showFastForwardIndicator = false
+            invalidate()
+        }
     }
-    
+
+    fun setFastForwardIndicatorVisible(visible: Boolean) {
+        if (showFastForwardIndicator == visible) return
+        showFastForwardIndicator = visible
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // 热区View不需要绘制任何内容，只需要处理触摸事件
+        if (showFastForwardIndicator) {
+            val drawable = fastForwardIndicatorDrawable ?: return
+            val left = indicatorMarginPx.toInt()
+            val bottom = (height - indicatorMarginPx).toInt()
+            val right = left + indicatorSizePx.toInt()
+            val top = bottom - indicatorSizePx.toInt()
+            drawable.setBounds(left, top, right, bottom)
+            drawable.draw(canvas)
+        }
     }
-    
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         // 如果热区未启用，不处理触摸事件
         if (!hotCornersEnabled) {

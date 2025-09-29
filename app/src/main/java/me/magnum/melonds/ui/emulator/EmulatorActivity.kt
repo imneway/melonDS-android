@@ -164,6 +164,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         override fun onFastForwardPressed() {
             fastForwardEnabled = !fastForwardEnabled
             binding.viewLayoutControls.setLayoutComponentToggleState(LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE, fastForwardEnabled)
+            binding.hotCornerView.setFastForwardIndicatorVisible(fastForwardEnabled)
             MelonEmulator.setFastForwardEnabled(fastForwardEnabled)
         }
 
@@ -256,6 +257,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
         }
 
         binding.textFps.visibility = View.INVISIBLE
+        binding.hotCornerView.setFastForwardIndicatorVisible(frontendInputHandler.fastForwardEnabled)
         binding.viewLayoutControls.setLayoutComponentViewBuilderFactory(RuntimeLayoutComponentViewBuilderFactory())
         binding.layoutRewind.setOnClickListener {
             closeRewindWindow()
@@ -690,8 +692,10 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
                 setLayoutComponentToggleState(LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE, frontendInputHandler.fastForwardEnabled)
                 setLayoutComponentToggleState(LayoutComponent.BUTTON_MICROPHONE_TOGGLE, frontendInputHandler.microphoneEnabled)
             }
+            binding.hotCornerView.setFastForwardIndicatorVisible(frontendInputHandler.fastForwardEnabled)
         } else {
             binding.viewLayoutControls.destroyLayout()
+            binding.hotCornerView.setFastForwardIndicatorVisible(false)
         }
     }
 
