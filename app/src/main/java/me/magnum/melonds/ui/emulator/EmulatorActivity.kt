@@ -807,6 +807,7 @@ class EmulatorActivity : AppCompatActivity() {
             }
         } else {
             binding.viewLayoutControls.destroyLayout()
+            binding.hotCornerView.setFastForwardIndicatorAnchorArea(null)
             binding.hotCornerView.setFastForwardIndicatorVisible(false)
             presentation?.layoutView?.destroyLayout()
         }
@@ -827,8 +828,11 @@ class EmulatorActivity : AppCompatActivity() {
         }
         val topView = binding.viewLayoutControls.getLayoutComponentView(topScreen)
         val bottomView = binding.viewLayoutControls.getLayoutComponentView(bottomScreen)
+        val topScreenRect = topView?.getRect()
+
+        binding.hotCornerView.setFastForwardIndicatorAnchorArea(topScreenRect)
         mainScreenRenderer.updateScreenAreas(
-            topView?.getRect(),
+            topScreenRect,
             bottomView?.getRect(),
             topView?.baseAlpha ?: 1f,
             bottomView?.baseAlpha ?: 1f,

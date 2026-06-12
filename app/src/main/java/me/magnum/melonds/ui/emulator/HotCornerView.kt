@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.isVisible
 import me.magnum.melonds.R
+import me.magnum.melonds.domain.model.Rect
 
 class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
@@ -23,7 +24,7 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
 
     private val hotCornerSizePx = dpToPixels(75f)
     private val indicatorSizePx = dpToPixels(32f)
-    private val indicatorMarginPx = dpToPixels(16f)
+    private val indicatorPaddingPx = dpToPixels(8f)
     private val fastForwardIndicatorDrawable = ContextCompat.getDrawable(context, R.drawable.ic_fast_forward_indicator)?.let {
         DrawableCompat.wrap(it.mutate())
     }
@@ -31,6 +32,7 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
     private var hotCornerCallback: HotCornerCallback? = null
     private var hotCornersEnabled = true
     private var showFastForwardIndicator = false
+    private var fastForwardIndicatorAnchorArea: Rect? = null
     private var pressedInHotCorner = false
 
     fun setHotCornerCallback(callback: HotCornerCallback?) {
@@ -52,6 +54,17 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
         invalidate()
     }
 
+    fun setFastForwardIndicatorAnchorArea(anchorArea: Rect?) {
+        if (fastForwardIndicatorAnchorArea == anchorArea) {
+            return
+        }
+
+        fastForwardIndicatorAnchorArea = anchorArea
+        if (showFastForwardIndicator) {
+            invalidate()
+        }
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (!showFastForwardIndicator) {
@@ -59,10 +72,11 @@ class HotCornerView(context: Context, attrs: AttributeSet? = null) : View(contex
         }
 
         val drawable = fastForwardIndicatorDrawable ?: return
-        val left = indicatorMarginPx.toInt()
-        val bottom = (height - indicatorMarginPx).toInt()
+        val anchorArea = fastForwardIndicatorAnchorArea
+        val left = (anchorArea?.x ?: 0) + indicatorPaddingPx.toInt()
+        val top = (anchorArea?.y ?: 0) + indicatorPaddingPx.toInt()
         val right = left + indicatorSizePx.toInt()
-        val top = bottom - indicatorSizePx.toInt()
+        val bottom = top + indicatorSizePx.toInt()
         drawable.setBounds(left, top, right, bottom)
         drawable.draw(canvas)
     }
