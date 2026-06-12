@@ -26,6 +26,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.os.ConfigurationCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -51,6 +52,7 @@ import kotlinx.coroutines.launch
 import me.magnum.melonds.MelonEmulator
 import me.magnum.melonds.R
 import me.magnum.melonds.common.PermissionHandler
+import me.magnum.melonds.common.vibration.TouchVibrator
 import me.magnum.melonds.databinding.ActivityEmulatorBinding
 import me.magnum.melonds.domain.model.ConsoleType
 import me.magnum.melonds.domain.model.ControllerConfiguration
@@ -160,6 +162,9 @@ class EmulatorActivity : AppCompatActivity() {
     @Inject
     lateinit var appForegroundStateObserver: AppForegroundStateObserver
 
+    @Inject
+    lateinit var touchVibrator: TouchVibrator
+
     private var presentation: ExternalPresentation? = null
 
     private lateinit var handler: Handler
@@ -209,6 +214,7 @@ class EmulatorActivity : AppCompatActivity() {
             fastForwardEnabled = !fastForwardEnabled
             binding.viewLayoutControls.setLayoutComponentToggleState(LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE, fastForwardEnabled)
             presentation?.layoutView?.setLayoutComponentToggleState(LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE, fastForwardEnabled)
+            binding.hotCornerView.setFastForwardIndicatorVisible(fastForwardEnabled)
             MelonEmulator.setFastForwardEnabled(fastForwardEnabled)
         }
 
@@ -243,6 +249,7 @@ class EmulatorActivity : AppCompatActivity() {
         viewModel.onSettingsChanged()
         setupSustainedPerformanceMode()
         setupFpsCounter()
+        updateHotCornerState()
         viewModel.resumeEmulator()
     }
     private val cheatsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -340,6 +347,8 @@ class EmulatorActivity : AppCompatActivity() {
             setFrontendInputHandler(frontendInputHandler)
             setSystemInputHandler(melonTouchHandler)
         }
+        setupHotCorners()
+        updateHotCornerState()
 
         val layoutChangeListener = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val oldWith = oldRight - oldLeft
@@ -466,6 +475,8 @@ class EmulatorActivity : AppCompatActivity() {
                         ToastEvent.GbaLoadFailed -> R.string.error_load_gba_rom to Toast.LENGTH_SHORT
                         ToastEvent.QuickSaveSuccessful -> R.string.saved to Toast.LENGTH_SHORT
                         ToastEvent.QuickLoadSuccessful -> R.string.loaded to Toast.LENGTH_SHORT
+                        ToastEvent.AutoSaveSuccessful -> R.string.auto_saved to Toast.LENGTH_SHORT
+                        ToastEvent.AutoLoadSuccessful -> R.string.auto_loaded to Toast.LENGTH_SHORT
                         ToastEvent.RewindNotEnabled -> R.string.rewind_not_enabled to Toast.LENGTH_SHORT
                         ToastEvent.RewindNotAvailableWhileRAHardcoreModeEnabled -> R.string.rewind_unavailable_ra_hardcore_enabled to Toast.LENGTH_LONG
                         ToastEvent.StateLoadFailed -> R.string.failed_load_state to Toast.LENGTH_SHORT
@@ -705,6 +716,7 @@ class EmulatorActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        setupFullscreen()
         choreographerFrameRenderer.startRendering()
 
         if (!activeOverlays.hasActiveOverlays()) {
@@ -719,8 +731,14 @@ class EmulatorActivity : AppCompatActivity() {
     }
 
     private fun setupFullscreen() {
+        val attributes = window.attributes
+        attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        window.attributes = attributes
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         window.insetsControllerCompat?.let {
-            it.hide(WindowInsetsCompat.Type.navigationBars())
+            it.hide(WindowInsetsCompat.Type.systemBars())
             it.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
@@ -777,6 +795,7 @@ class EmulatorActivity : AppCompatActivity() {
                 setLayoutComponentToggleState(LayoutComponent.BUTTON_FAST_FORWARD_TOGGLE, frontendInputHandler.fastForwardEnabled)
                 setLayoutComponentToggleState(LayoutComponent.BUTTON_MICROPHONE_TOGGLE, frontendInputHandler.microphoneEnabled)
             }
+            binding.hotCornerView.setFastForwardIndicatorVisible(frontendInputHandler.fastForwardEnabled)
             handler.post {
                 updateRendererScreenAreas()
             }
@@ -788,6 +807,7 @@ class EmulatorActivity : AppCompatActivity() {
             }
         } else {
             binding.viewLayoutControls.destroyLayout()
+            binding.hotCornerView.setFastForwardIndicatorVisible(false)
             presentation?.layoutView?.destroyLayout()
         }
     }
@@ -819,6 +839,44 @@ class EmulatorActivity : AppCompatActivity() {
 
     private fun setupInputHandling(controllerConfiguration: ControllerConfiguration) {
         nativeInputListener = InputProcessor(controllerConfiguration, melonTouchHandler, frontendInputHandler)
+    }
+
+    private fun setupHotCorners() {
+        binding.hotCornerView.setHotCornerCallback(object : HotCornerView.HotCornerCallback {
+            override fun onTopLeftClicked() {
+                performHotCornerHapticFeedback()
+                viewModel.doQuickSave()
+            }
+
+            override fun onTopRightClicked() {
+                performHotCornerHapticFeedback()
+                viewModel.doQuickLoad()
+            }
+
+            override fun onBottomLeftClicked() {
+                performHotCornerHapticFeedback()
+                frontendInputHandler.onFastForwardPressed()
+            }
+
+            override fun onBottomRightClicked() {
+                performHotCornerHapticFeedback()
+                frontendInputHandler.onPausePressed()
+            }
+
+            override fun onHotCornerReleased() {
+                performHotCornerHapticFeedback()
+            }
+        })
+    }
+
+    private fun performHotCornerHapticFeedback() {
+        if (viewModel.runtimeLayout.value?.isHapticFeedbackEnabled == true) {
+            touchVibrator.performTouchHapticFeedback()
+        }
+    }
+
+    private fun updateHotCornerState() {
+        binding.hotCornerView.setHotCornersEnabled(viewModel.areHotCornersEnabled())
     }
 
     private fun handleBackPressed() {
@@ -994,7 +1052,7 @@ class EmulatorActivity : AppCompatActivity() {
         super.onPause()
         enableScreenTimeOut()
         choreographerFrameRenderer.stopRendering()
-        viewModel.pauseEmulator(false)
+        viewModel.pauseEmulatorAndAutoSave()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

@@ -113,6 +113,9 @@ class EmulatorViewModel @Inject constructor(
     private val sessionCoroutineScope = EmulatorSessionCoroutineScope()
     private var raSessionJob: Job? = null
 
+    private val _exitInProgress = MutableStateFlow(false)
+    fun isExitInProgress(): Boolean = _exitInProgress.value
+
     private val _emulatorState = MutableStateFlow<EmulatorState>(EmulatorState.Uninitialized)
     val emulatorState = _emulatorState.asStateFlow()
 
@@ -261,6 +264,7 @@ class EmulatorViewModel @Inject constructor(
                 _emulatorState.value = EmulatorState.RunningRom(rom)
                 startTrackingFps()
                 startTrackingPlayTime(rom)
+                doAutoLoad()
             }
         }
     }
@@ -385,7 +389,7 @@ class EmulatorViewModel @Inject constructor(
             _uiEvent.tryEmit(EmulatorUiEvent.ShowPendingSubmissionsDialog)
             retroAchievementsSubmissionHandler.retrySubmissionsImmediately()
         } else {
-            stopEmulatorAndExit()
+            autoSaveAndExit()
         }
     }
 
@@ -398,8 +402,25 @@ class EmulatorViewModel @Inject constructor(
     }
 
     private fun stopEmulatorAndExit() {
-        emulatorManager.stopEmulator()
+        _exitInProgress.value = true
+        stopEmulator()
         _uiEvent.tryEmit(EmulatorUiEvent.CloseEmulator)
+    }
+
+    private fun autoSaveAndExit() {
+        if (_exitInProgress.value) {
+            return
+        }
+
+        _exitInProgress.value = true
+        sessionCoroutineScope.launch {
+            try {
+                autoSaveCurrentRom(resumeAfterSave = false, emitSuccessToast = true)
+            } finally {
+                stopEmulator()
+                _uiEvent.emit(EmulatorUiEvent.CloseEmulator)
+            }
+        }
     }
 
     private fun startTrackingPlayTime(rom: Rom) {
@@ -453,10 +474,7 @@ class EmulatorViewModel @Inject constructor(
                 when (option) {
                     FirmwarePauseMenuOption.SETTINGS -> _uiEvent.tryEmit(EmulatorUiEvent.OpenScreen.SettingsScreen)
                     FirmwarePauseMenuOption.RESET -> resetEmulator()
-                    FirmwarePauseMenuOption.EXIT -> {
-                        emulatorManager.stopEmulator()
-                        _uiEvent.tryEmit(EmulatorUiEvent.CloseEmulator)
-                    }
+                    FirmwarePauseMenuOption.EXIT -> stopEmulatorAndExit()
                 }
             }
         }
@@ -567,6 +585,75 @@ class EmulatorViewModel @Inject constructor(
         }
     }
 
+    fun doAutoSave(resumeAfterSave: Boolean = true) {
+        sessionCoroutineScope.launch {
+            autoSaveCurrentRom(resumeAfterSave = resumeAfterSave, emitSuccessToast = true)
+        }
+    }
+
+    fun pauseEmulatorAndAutoSave() {
+        sessionCoroutineScope.launch {
+            if (_exitInProgress.value) {
+                return@launch
+            }
+
+            when (_emulatorState.value) {
+                is EmulatorState.RunningRom -> autoSaveCurrentRom(resumeAfterSave = false, emitSuccessToast = true)
+                is EmulatorState.RunningFirmware -> emulatorManager.pauseEmulator()
+                else -> {
+                    // Do nothing
+                }
+            }
+        }
+    }
+
+    fun doAutoLoad() {
+        val currentState = _emulatorState.value
+        when (currentState) {
+            is EmulatorState.RunningRom -> {
+                if (emulatorSession.areSaveStateLoadsAllowed()) {
+                    sessionCoroutineScope.launch {
+                        emulatorManager.pauseEmulator()
+                        val latestSlot = saveStatesRepository.getRomLatestSaveStateSlot(currentState.rom)
+                        if (latestSlot != null && loadRomState(currentState.rom, latestSlot)) {
+                            _toastEvent.emit(ToastEvent.AutoLoadSuccessful)
+                        }
+                        emulatorManager.resumeEmulator()
+                    }
+                } else {
+                    _toastEvent.tryEmit(ToastEvent.CannotUseSaveStatesWhenRAHardcoreIsEnabled)
+                }
+            }
+            is EmulatorState.RunningFirmware -> {
+                _toastEvent.tryEmit(ToastEvent.CannotLoadStateWhenRunningFirmware)
+            }
+            else -> {
+                // Do nothing
+            }
+        }
+    }
+
+    private suspend fun autoSaveCurrentRom(resumeAfterSave: Boolean, emitSuccessToast: Boolean): Boolean {
+        val currentState = _emulatorState.value
+        if (currentState !is EmulatorState.RunningRom) {
+            return false
+        }
+
+        emulatorManager.pauseEmulator()
+        return try {
+            val autoSaveSlot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, false, null, null)
+            val saved = saveRomState(currentState.rom, autoSaveSlot)
+            if (saved && emitSuccessToast) {
+                _toastEvent.emit(ToastEvent.AutoSaveSuccessful)
+            }
+            saved
+        } finally {
+            if (resumeAfterSave && !_exitInProgress.value) {
+                emulatorManager.resumeEmulator()
+            }
+        }
+    }
+
     private suspend fun saveRomState(rom: Rom, slot: SaveStateSlot): Boolean {
         val slotUri = saveStatesRepository.getRomSaveStateUri(rom, slot)
         if (!emulatorManager.saveState(slotUri)) {
@@ -637,6 +724,7 @@ class EmulatorViewModel @Inject constructor(
         sessionCoroutineScope.notifyNewSessionStarted()
         emulatorSession.reset()
         raSessionJob = null
+        _exitInProgress.value = false
         _currentFps.value = null
         _emulatorState.value = newState
         _mainScreenBackground.value = RuntimeBackground.None
@@ -773,6 +861,10 @@ class EmulatorViewModel @Inject constructor(
 
     fun isSustainedPerformanceModeEnabled(): Boolean {
         return settingsRepository.isSustainedPerformanceModeEnabled()
+    }
+
+    fun areHotCornersEnabled(): Boolean {
+        return settingsRepository.areHotCornersEnabled()
     }
 
     fun getFpsCounterPosition(): FpsCounterPosition {

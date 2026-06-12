@@ -9,6 +9,8 @@ sealed class ToastEvent {
     data object StateStateDoesNotExist : ToastEvent()
     data object QuickSaveSuccessful : ToastEvent()
     data object QuickLoadSuccessful : ToastEvent()
+    data object AutoSaveSuccessful : ToastEvent()
+    data object AutoLoadSuccessful : ToastEvent()
     data object CannotUseSaveStatesWhenRAHardcoreIsEnabled : ToastEvent()
     data object CannotSaveStateWhenRunningFirmware : ToastEvent()
     data object CannotLoadStateWhenRunningFirmware : ToastEvent()

@@ -113,7 +113,7 @@ class RuntimeLayoutView(context: Context, attrs: AttributeSet? = null) : LayoutV
         getLayoutComponentViews().forEach {
             if (!it.component.isScreen()) {
                 it.view.apply {
-                    alpha = inputAlpha
+                    alpha = inputAlpha * it.baseAlpha
                 }
             }
         }
@@ -128,7 +128,8 @@ class RuntimeLayoutView(context: Context, attrs: AttributeSet? = null) : LayoutV
             LayoutComponent.BOTTOM_SCREEN to LayoutComponent.TOP_SCREEN
         }
         systemInputHandler?.let {
-            getLayoutComponentView(touchScreenComponent)?.view?.setOnTouchListener(TouchscreenInputHandler(it))
+            val enableHapticFeedback = currentRuntimeLayout?.isHapticFeedbackEnabled ?: false
+            getLayoutComponentView(touchScreenComponent)?.view?.setOnTouchListener(TouchscreenInputHandler(it, enableHapticFeedback, touchVibrator))
         }
         getLayoutComponentView(nonTouchScreenComponent)?.view?.setOnTouchListener(null)
     }
