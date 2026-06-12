@@ -43,6 +43,13 @@
             app:iconSpaceReserved="false"
             android:defaultValue="false" />
 
+    <SwitchPreference
+            android:key="enable_hot_corners"
+            android:title="@string/hot_corners"
+            android:summary="@string/hot_corners_summary"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
     <Preference
             android:key="backup_settings"
             android:title="@string/backup_settings"

@@ -36,7 +36,17 @@ class FileSystemSaveStatesRepository(
             }
         }
 
-        return saveStateSlots.toList()
+        return buildList {
+            add(saveStateSlots[SaveStateSlot.QUICK_SAVE_SLOT])
+            add(getRomAutoSaveStateSlot(rom))
+            addAll(saveStateSlots.drop(1))
+        }
+    }
+
+    override fun getRomLatestSaveStateSlot(rom: Rom): SaveStateSlot? {
+        return getRomSaveStates(rom)
+            .filter { it.exists && it.lastUsedDate != null }
+            .maxByOrNull { it.lastUsedDate!! }
     }
 
     override fun getRomQuickSaveStateSlot(rom: Rom): SaveStateSlot {
@@ -52,7 +62,7 @@ class FileSystemSaveStatesRepository(
         val saveStateDirectoryDocument = getSaveStateDirectoryDocument(rom) ?: throw SaveSlotLoadException("Could not create parent directory document")
 
         val romFileName = getRomFileNameWithoutExtension(rom) ?: throw SaveSlotLoadException("Could not determine ROM file name")
-        val saveStateName = "$romFileName.ml${saveState.slot}"
+        val saveStateName = getRomSaveStateFileName(romFileName, saveState)
         val saveStateFile = saveStateDirectoryDocument.findFile(saveStateName)
 
         val uri = if (saveStateFile != null) {
@@ -80,7 +90,7 @@ class FileSystemSaveStatesRepository(
         val saveStateDirectoryDocument = getSaveStateDirectoryDocument(rom) ?: throw SaveSlotLoadException("Could not create parent directory document")
         val romFileName = getRomFileNameWithoutExtension(rom) ?: throw SaveSlotLoadException("Could not determine ROM file name")
 
-        val saveStateName = "$romFileName.ml${saveState.slot}"
+        val saveStateName = getRomSaveStateFileName(romFileName, saveState)
         val saveStateFile = saveStateDirectoryDocument.findFile(saveStateName)
 
         saveStateFile?.delete()
@@ -93,6 +103,34 @@ class FileSystemSaveStatesRepository(
 
         val quickSaveStateFileName = "$romFileName.ml0"
         return saveStateDirectoryDocument.findFile(quickSaveStateFileName)
+    }
+
+    private fun getRomAutoSaveStateSlot(rom: Rom): SaveStateSlot {
+        val autoSaveStateDocument = getRomAutoSaveStateDocument(rom)
+        val saveStateExists = autoSaveStateDocument != null
+        val lastModified = autoSaveStateDocument?.let { Date(it.lastModified()) }
+        val slot = SaveStateSlot(SaveStateSlot.AUTO_SAVE_SLOT, saveStateExists, lastModified, null)
+        val screenshotUri = saveStateScreenshotProvider.getRomSaveStateScreenshotUri(rom, slot)
+        return slot.copy(screenshot = screenshotUri)
+    }
+
+    private fun getRomAutoSaveStateDocument(rom: Rom): DocumentFile? {
+        val saveStateDirectoryDocument = getSaveStateDirectoryDocument(rom) ?: return null
+        val romFileName = getRomFileNameWithoutExtension(rom) ?: return null
+
+        return saveStateDirectoryDocument.findFile(getAutoSaveStateFileName(romFileName))
+    }
+
+    private fun getRomSaveStateFileName(romFileName: String, saveState: SaveStateSlot): String {
+        return if (saveState.slot == SaveStateSlot.AUTO_SAVE_SLOT) {
+            getAutoSaveStateFileName(romFileName)
+        } else {
+            "$romFileName.ml${saveState.slot}"
+        }
+    }
+
+    private fun getAutoSaveStateFileName(romFileName: String): String {
+        return "$romFileName.mlauto"
     }
 
     private fun getSaveStateDirectoryDocument(rom: Rom): DocumentFile? {

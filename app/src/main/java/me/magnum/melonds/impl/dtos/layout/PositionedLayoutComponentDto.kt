@@ -11,6 +11,8 @@ data class PositionedLayoutComponentDto(
     val component: String,
     @SerializedName("alpha")
     val alpha: Float? = null,
+    @SerializedName("opacity")
+    val opacity: Int? = null,
     @SerializedName("onTop")
     val onTop: Boolean? = null,
 ) {
@@ -21,16 +23,18 @@ data class PositionedLayoutComponentDto(
                 RectDto.fromModel(positionedLayoutComponent.rect),
                 positionedLayoutComponent.component.name,
                 positionedLayoutComponent.alpha,
+                null,
                 positionedLayoutComponent.onTop,
             )
         }
     }
 
     fun toModel(): PositionedLayoutComponent {
+        val alphaValue = alpha ?: opacity?.coerceIn(0, 100)?.let { it / 100f } ?: 1f
         return PositionedLayoutComponent(
             rect.toModel(),
             enumValueOfIgnoreCase(component),
-            alpha ?: 1f,
+            alphaValue,
             onTop ?: false,
         )
     }
