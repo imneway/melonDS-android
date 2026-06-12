@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.net.toUri
 import androidx.core.os.ConfigurationCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isGone
@@ -579,6 +580,7 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
 
     override fun onResume() {
         super.onResume()
+        setupFullscreen()
         Choreographer.getInstance().postFrameCallback(this)
 
         if (!activeOverlays.hasActiveOverlays()) {
@@ -634,8 +636,14 @@ class EmulatorActivity : AppCompatActivity(), Choreographer.FrameCallback {
     }
 
     private fun setupFullscreen() {
+        val attributes = window.attributes
+        attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        window.attributes = attributes
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         window.insetsControllerCompat?.let {
-            it.hide(WindowInsetsCompat.Type.navigationBars())
+            it.hide(WindowInsetsCompat.Type.systemBars())
             it.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
     }
