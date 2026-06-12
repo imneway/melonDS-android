@@ -375,6 +375,15 @@
     <string name="label_width">宽度</string>
     <string name="label_height">高度</string>
     <string name="label_alpha">透明度</string>
+    <string name="label_position">位置（dp）</string>
+    <string name="move_up">↑</string>
+    <string name="move_down">↓</string>
+    <string name="move_left">←</string>
+    <string name="move_right">→</string>
+    <string name="move_up_description">上移</string>
+    <string name="move_down_description">下移</string>
+    <string name="move_left_description">左移</string>
+    <string name="move_right_description">右移</string>
     <string name="label_aspect_ratio">宽高比：</string>
     <string name="aspect_ratio_4_3">4:3（原始）</string>
     <string name="aspect_ratio_16_9">16:9（宽屏）</string>

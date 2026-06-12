@@ -13,6 +13,7 @@ import me.magnum.melonds.ui.common.LayoutComponentView
 import me.magnum.melonds.ui.common.LayoutView
 import me.magnum.melonds.ui.layouteditor.model.LayoutTarget
 import me.magnum.melonds.impl.dpToPixels
+import me.magnum.melonds.impl.pixelsToDp
 import kotlin.math.*
 
 typealias ViewSelectedListener = (
@@ -205,6 +206,35 @@ class LayoutEditorView(context: Context, attrs: AttributeSet?) : LayoutView(cont
         val finalY = min(max(currentPosition.y + offsetY, 0f), height - view.getHeight().toFloat())
         view.setPosition(Point(finalX.toInt(), finalY.toInt()))
         modifiedByUser = true
+    }
+
+    fun hasSelectedView(): Boolean {
+        return selectedView != null
+    }
+
+    fun getSelectedViewPositionInDp(): Point? {
+        val view = selectedView ?: return null
+        val position = view.getPosition()
+        return Point(
+            context.pixelsToDp(position.x.toFloat()).roundToInt(),
+            context.pixelsToDp(position.y.toFloat()).roundToInt(),
+        )
+    }
+
+    fun moveSelectedViewInDp(offsetX: Int, offsetY: Int) {
+        val view = selectedView ?: return
+        dragView(
+            view,
+            context.dpToPixels(offsetX.toFloat()),
+            context.dpToPixels(offsetY.toFloat()),
+        )
+    }
+
+    fun isSelectedViewInUpperHalf(): Boolean {
+        val view = selectedView ?: return false
+        val position = view.getPosition()
+        val viewCenterY = position.y + view.getHeight() / 2
+        return viewCenterY < height / 2
     }
 
     fun setSelectedViewAlpha(alpha: Float) {

@@ -9,6 +9,7 @@ import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -17,11 +18,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.findViewTreeViewModelStoreOwner
@@ -87,6 +90,7 @@ class LayoutEditorManagerView(
     var listener: LayoutEditorManagerListener? = null
     private var areBottomControlsShown = true
     private var areScalingControlsShown = true
+    private var areScalingControlsAtTop = false
     private var selectedViewMinSize = 0
     private var currentWidthScale = 0f
     private var currentHeightScale = 0f
@@ -96,6 +100,7 @@ class LayoutEditorManagerView(
     private var topAspectRatio = ScreenAspectRatio.RATIO_4_3
     private var bottomAspectRatio = ScreenAspectRatio.RATIO_4_3
     private var updatingAspectSpinner = false
+    private var displayCutoutInsets = Insets.NONE
 
     private var showLayoutPropertiesDialog by mutableStateOf(initialEditorState?.isPropertiesDialogShown ?: false)
     private var showBackgroundPropertiesDialog by mutableStateOf(initialEditorState?.isBackgroundPropertiesDialogShown ?: false)
@@ -194,12 +199,8 @@ class LayoutEditorManagerView(
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
-            binding.layoutScalingContainer.setPadding(
-                insets.left,
-                0,
-                insets.right,
-                insets.bottom,
-            )
+            displayCutoutInsets = insets
+            updateScalingContainerPadding()
             binding.layoutControls.setPadding(
                 insets.left,
                 0,
@@ -221,9 +222,25 @@ class LayoutEditorManagerView(
         }
         binding.buttonCenterHorizontal.setOnClickListener {
             binding.viewLayoutEditor.centerSelectedViewHorizontally()
+            updateSelectedViewPosition()
+            updateScalingControlsPositionForSelectedView()
         }
         binding.buttonCenterVertical.setOnClickListener {
             binding.viewLayoutEditor.centerSelectedViewVertically()
+            updateSelectedViewPosition()
+            updateScalingControlsPositionForSelectedView()
+        }
+        binding.buttonMoveUp.setOnClickListener {
+            moveSelectedView(0, -1)
+        }
+        binding.buttonMoveDown.setOnClickListener {
+            moveSelectedView(0, 1)
+        }
+        binding.buttonMoveLeft.setOnClickListener {
+            moveSelectedView(-1, 0)
+        }
+        binding.buttonMoveRight.setOnClickListener {
+            moveSelectedView(1, 0)
         }
 
         binding.viewLayoutEditor.setLayoutComponentViewBuilderFactory(EditorLayoutComponentViewBuilderFactory())
@@ -238,6 +255,7 @@ class LayoutEditorManagerView(
             // Force the scaling controls to restart so the new view always
             // receives fresh listeners even if they were already visible.
             hideScalingControls(false)
+            setScalingControlsPosition(!binding.viewLayoutEditor.isSelectedViewInUpperHalf())
             selectedViewIsScreen = view.component.isScreen()
             selectedScreenComponent = view.component
             selectedAspectRatio = when (view.component) {
@@ -255,6 +273,7 @@ class LayoutEditorManagerView(
                 view.baseAlpha,
                 view.onTop,
             )
+            updateSelectedViewPosition()
         }
         binding.viewLayoutEditor.setOnViewDeselectedListener {
             hideScalingControls()
@@ -268,6 +287,8 @@ class LayoutEditorManagerView(
                 val value = (binding.seekBarSize.max * scale + selectedViewMinSize).toInt()
                 binding.textSize.text = value.toString()
                 binding.viewLayoutEditor.scaleSelectedView(scale)
+                updateSelectedViewPosition()
+                updateScalingControlsPositionForSelectedView()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -290,6 +311,8 @@ class LayoutEditorManagerView(
                     binding.textWidth.text = (binding.seekBarWidth.max * currentWidthScale + selectedViewMinSize).toInt().toString()
                 }
                 binding.viewLayoutEditor.scaleSelectedView(currentWidthScale, currentHeightScale)
+                updateSelectedViewPosition()
+                updateScalingControlsPositionForSelectedView()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -312,6 +335,8 @@ class LayoutEditorManagerView(
                     binding.textHeight.text = (binding.seekBarHeight.max * currentHeightScale + selectedViewMinSize).toInt().toString()
                 }
                 binding.viewLayoutEditor.scaleSelectedView(currentWidthScale, currentHeightScale)
+                updateSelectedViewPosition()
+                updateScalingControlsPositionForSelectedView()
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar) {
@@ -367,6 +392,8 @@ class LayoutEditorManagerView(
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         return if (binding.viewLayoutEditor.handleKeyDown(event)) {
+            updateSelectedViewPosition()
+            updateScalingControlsPositionForSelectedView()
             true
         } else {
             super.onKeyDown(keyCode, event)
@@ -400,6 +427,60 @@ class LayoutEditorManagerView(
                 Toast.makeText(context, R.string.layout_background_load_failed, Toast.LENGTH_LONG).show()
             }
         })
+    }
+
+    private fun moveSelectedView(offsetX: Int, offsetY: Int) {
+        binding.viewLayoutEditor.moveSelectedViewInDp(offsetX, offsetY)
+        updateSelectedViewPosition()
+        updateScalingControlsPositionForSelectedView()
+    }
+
+    private fun updateSelectedViewPosition() {
+        val position = binding.viewLayoutEditor.getSelectedViewPositionInDp()
+        binding.textPosition.text = if (position != null) {
+            "${position.x}, ${position.y}"
+        } else {
+            ""
+        }
+    }
+
+    private fun updateScalingControlsPositionForSelectedView(animate: Boolean = true) {
+        if (!binding.viewLayoutEditor.hasSelectedView()) {
+            return
+        }
+
+        val shouldShowAtTop = !binding.viewLayoutEditor.isSelectedViewInUpperHalf()
+        if (shouldShowAtTop == areScalingControlsAtTop) {
+            return
+        }
+
+        setScalingControlsPosition(shouldShowAtTop)
+        if (areScalingControlsShown) {
+            animateScalingControlsToVisible(animate)
+        }
+    }
+
+    private fun setScalingControlsPosition(showAtTop: Boolean) {
+        if (showAtTop == areScalingControlsAtTop) {
+            return
+        }
+
+        areScalingControlsAtTop = showAtTop
+        binding.layoutScalingContainer.updateLayoutParams<RelativeLayout.LayoutParams> {
+            removeRule(RelativeLayout.ALIGN_PARENT_TOP)
+            removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
+            addRule(if (showAtTop) RelativeLayout.ALIGN_PARENT_TOP else RelativeLayout.ALIGN_PARENT_BOTTOM)
+        }
+        updateScalingContainerPadding()
+    }
+
+    private fun updateScalingContainerPadding() {
+        binding.layoutScalingContainer.setPadding(
+            displayCutoutInsets.left,
+            if (areScalingControlsAtTop) displayCutoutInsets.top else 0,
+            displayCutoutInsets.right,
+            if (areScalingControlsAtTop) 0 else displayCutoutInsets.bottom,
+        )
     }
 
     private fun openButtonsMenu() {
@@ -519,6 +600,63 @@ class LayoutEditorManagerView(
         areBottomControlsShown = false
     }
 
+    private fun getScalingControlsVisibleY(): Float {
+        return if (areScalingControlsAtTop) {
+            0f
+        } else {
+            binding.root.bottom.toFloat() - binding.layoutScalingContainer.height.toFloat()
+        }
+    }
+
+    private fun getScalingControlsHiddenY(): Float {
+        return if (areScalingControlsAtTop) {
+            -binding.layoutScalingContainer.height.toFloat()
+        } else {
+            binding.root.bottom.toFloat()
+        }
+    }
+
+    private fun animateScalingControlsToVisible(animate: Boolean) {
+        binding.layoutScalingContainer.animate().cancel()
+        if (animate) {
+            binding.layoutScalingContainer.isVisible = true
+            binding.layoutScalingContainer.post {
+                binding.layoutScalingContainer
+                    .animate()
+                    .y(getScalingControlsVisibleY())
+                    .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
+                    .withEndAction(null)
+                    .start()
+            }
+        } else {
+            binding.layoutScalingContainer.isVisible = true
+            binding.layoutScalingContainer.post {
+                binding.layoutScalingContainer.y = getScalingControlsVisibleY()
+            }
+        }
+    }
+
+    private fun animateScalingControlsToHidden(animate: Boolean) {
+        binding.layoutScalingContainer.animate().cancel()
+        if (animate) {
+            binding.layoutScalingContainer.post {
+                binding.layoutScalingContainer
+                    .animate()
+                    .y(getScalingControlsHiddenY())
+                    .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
+                    .withEndAction {
+                        binding.layoutScalingContainer.isInvisible = true
+                    }
+                    .start()
+            }
+        } else {
+            binding.layoutScalingContainer.post {
+                binding.layoutScalingContainer.y = getScalingControlsHiddenY()
+                binding.layoutScalingContainer.isInvisible = true
+            }
+        }
+    }
+
     private fun showScalingControls(
         widthScale: Float,
         heightScale: Float,
@@ -564,8 +702,10 @@ class LayoutEditorManagerView(
         binding.seekBarWidth.isVisible = isScreen
         binding.layoutHeightLabels.isVisible = isScreen
         binding.seekBarHeight.isVisible = isScreen
-        binding.layoutAlphaLabels.isVisible = isScreen
-        binding.seekBarAlpha.isVisible = isScreen
+        binding.layoutAlphaLabels.isVisible = true
+        binding.seekBarAlpha.isVisible = true
+        binding.layoutPositionLabels.isVisible = true
+        binding.layoutMoveButtons.isVisible = true
         binding.layoutAspectRatio.isVisible = isScreen
         binding.checkboxAboveScreen.isVisible = isScreen
         binding.buttonCenterHorizontal.isVisible = isScreen
@@ -576,21 +716,7 @@ class LayoutEditorManagerView(
         selectedViewMinSize = minSize
 
         if (!areScalingControlsShown) {
-            if (animate) {
-                binding.layoutScalingContainer.isVisible = true
-                binding.layoutScalingContainer.post {
-                    binding.layoutScalingContainer
-                        .animate()
-                        .y(binding.root.bottom.toFloat() - binding.layoutScalingContainer.height.toFloat())
-                        .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
-                        .withEndAction(null)
-                        .start()
-                }
-            } else {
-                binding.layoutScalingContainer.isVisible = true
-                binding.layoutScalingContainer.y = binding.root.bottom.toFloat() - binding.layoutScalingContainer.height.toFloat()
-            }
-
+            animateScalingControlsToVisible(animate)
             areScalingControlsShown = true
         }
 
@@ -602,24 +728,7 @@ class LayoutEditorManagerView(
             return
         }
 
-        binding.layoutScalingContainer.animate().cancel()
-
-        if (animate) {
-            binding.layoutScalingContainer.post {
-                binding.layoutScalingContainer
-                    .animate()
-                    .y(binding.root.bottom.toFloat())
-                    .setDuration(CONTROLS_SLIDE_ANIMATION_DURATION_MS)
-                    .withEndAction {
-                        binding.layoutScalingContainer.isInvisible = true
-                    }
-                    .start()
-            }
-        } else {
-            binding.layoutScalingContainer.y = binding.layoutScalingContainer.bottom.toFloat()
-            binding.layoutScalingContainer.isInvisible = true
-        }
-
+        animateScalingControlsToHidden(animate)
         areScalingControlsShown = false
     }
 
