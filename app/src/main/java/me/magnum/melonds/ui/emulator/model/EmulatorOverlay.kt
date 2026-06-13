@@ -1,6 +1,7 @@
 package me.magnum.melonds.ui.emulator.model
 
 enum class EmulatorOverlay {
+    HOT_CORNER_PAUSE,
     PAUSE_MENU,
     REWIND_WINDOW,
     SAVE_STATES_DIALOG,

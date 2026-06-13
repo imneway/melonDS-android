@@ -207,6 +207,7 @@ class EmulatorActivity : AppCompatActivity() {
         }
 
         override fun onPausePressed() {
+            clearHotCornerPauseOverlay()
             viewModel.pauseEmulator(true)
         }
 
@@ -250,11 +251,11 @@ class EmulatorActivity : AppCompatActivity() {
         setupSustainedPerformanceMode()
         setupFpsCounter()
         updateHotCornerState()
-        viewModel.resumeEmulator()
+        resumeEmulator()
     }
     private val cheatsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         viewModel.onCheatsChanged()
-        viewModel.resumeEmulator()
+        resumeEmulator()
     }
     private val permissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         lifecycleScope.launch {
@@ -275,6 +276,7 @@ class EmulatorActivity : AppCompatActivity() {
     }
     private val showAchievementList = mutableStateOf(false)
     private val showPendingSubmissionsDialog = mutableStateOf(false)
+    private var isHotCornerPauseEnabled = false
 
     private val activeOverlays = EmulatorOverlayTracker(
         onOverlaysCleared = {
@@ -384,7 +386,7 @@ class EmulatorActivity : AppCompatActivity() {
                         viewModel = achievementsViewModel,
                         onDismiss = {
                             activeOverlays.removeActiveOverlay(EmulatorOverlay.ACHIEVEMENTS_DIALOG)
-                            viewModel.resumeEmulator()
+                            resumeEmulator()
                             showAchievementList.value = false
                         }
                     )
@@ -396,7 +398,7 @@ class EmulatorActivity : AppCompatActivity() {
                         onExit = { viewModel.exitEmulator(force = true) },
                         onCancel = {
                             activeOverlays.removeActiveOverlay(EmulatorOverlay.PENDING_SUBMISSION_CONFIRM_EXIT)
-                            viewModel.resumeEmulator()
+                            resumeEmulator()
                             showPendingSubmissionsDialog.value = false
                         }
                     )
@@ -708,7 +710,7 @@ class EmulatorActivity : AppCompatActivity() {
                         activeOverlays.removeActiveOverlay(EmulatorOverlay.SWITCH_NEW_ROM_DIALOG)
                     }
                     .setOnCancelListener {
-                        viewModel.resumeEmulator()
+                        resumeEmulator()
                     }
                     .show()
         }
@@ -721,7 +723,7 @@ class EmulatorActivity : AppCompatActivity() {
 
         if (!activeOverlays.hasActiveOverlays()) {
             disableScreenTimeOut()
-            viewModel.resumeEmulator()
+            resumeEmulator()
         }
     }
 
@@ -807,7 +809,8 @@ class EmulatorActivity : AppCompatActivity() {
             }
         } else {
             binding.viewLayoutControls.destroyLayout()
-            binding.hotCornerView.setFastForwardIndicatorAnchorArea(null)
+            clearHotCornerPauseOverlay()
+            binding.hotCornerView.setEmulatorScreenAreas(null, null)
             binding.hotCornerView.setFastForwardIndicatorVisible(false)
             presentation?.layoutView?.destroyLayout()
         }
@@ -829,11 +832,12 @@ class EmulatorActivity : AppCompatActivity() {
         val topView = binding.viewLayoutControls.getLayoutComponentView(topScreen)
         val bottomView = binding.viewLayoutControls.getLayoutComponentView(bottomScreen)
         val topScreenRect = topView?.getRect()
+        val bottomScreenRect = bottomView?.getRect()
 
-        binding.hotCornerView.setFastForwardIndicatorAnchorArea(topScreenRect)
+        binding.hotCornerView.setEmulatorScreenAreas(topScreenRect, bottomScreenRect)
         mainScreenRenderer.updateScreenAreas(
             topScreenRect,
-            bottomView?.getRect(),
+            bottomScreenRect,
             topView?.baseAlpha ?: 1f,
             bottomView?.baseAlpha ?: 1f,
             topView?.onTop ?: false,
@@ -864,7 +868,7 @@ class EmulatorActivity : AppCompatActivity() {
 
             override fun onBottomRightClicked() {
                 performHotCornerHapticFeedback()
-                frontendInputHandler.onPausePressed()
+                toggleHotCornerPause()
             }
 
             override fun onHotCornerReleased() {
@@ -884,11 +888,40 @@ class EmulatorActivity : AppCompatActivity() {
     }
 
     private fun handleBackPressed() {
-        if (isRewindWindowOpen()) {
+        if (isHotCornerPauseEnabled) {
+            resumeEmulator()
+        } else if (isRewindWindowOpen()) {
             closeRewindWindow()
         } else {
             viewModel.pauseEmulator(true)
         }
+    }
+
+    private fun toggleHotCornerPause() {
+        if (isHotCornerPauseEnabled) {
+            resumeEmulator()
+            return
+        }
+
+        isHotCornerPauseEnabled = true
+        activeOverlays.addActiveOverlay(EmulatorOverlay.HOT_CORNER_PAUSE)
+        binding.hotCornerView.setPauseOverlayVisible(true)
+        viewModel.pauseEmulator(showPauseMenu = false)
+    }
+
+    private fun resumeEmulator() {
+        clearHotCornerPauseOverlay()
+        viewModel.resumeEmulator()
+    }
+
+    private fun clearHotCornerPauseOverlay() {
+        if (!isHotCornerPauseEnabled) {
+            return
+        }
+
+        isHotCornerPauseEnabled = false
+        binding.hotCornerView.setPauseOverlayVisible(false)
+        activeOverlays.removeActiveOverlay(EmulatorOverlay.HOT_CORNER_PAUSE)
     }
 
     private fun showPauseMenu(pauseMenu: PauseMenu) {
@@ -907,7 +940,7 @@ class EmulatorActivity : AppCompatActivity() {
                     activeOverlays.removeActiveOverlay(EmulatorOverlay.PAUSE_MENU)
                 }
                 .setOnCancelListener {
-                    viewModel.resumeEmulator()
+                    resumeEmulator()
                 }
                 .show()
     }
@@ -980,7 +1013,7 @@ class EmulatorActivity : AppCompatActivity() {
                 activeOverlays.removeActiveOverlay(EmulatorOverlay.SAVE_STATES_DIALOG)
             }
             .setOnCancelListener {
-                viewModel.resumeEmulator()
+                resumeEmulator()
             }
             .show()
     }
@@ -1034,7 +1067,7 @@ class EmulatorActivity : AppCompatActivity() {
     private fun closeRewindWindow() {
         activeOverlays.removeActiveOverlay(EmulatorOverlay.REWIND_WINDOW)
         binding.root.transitionToState(R.id.rewind_hidden)
-        viewModel.resumeEmulator()
+        resumeEmulator()
     }
 
     private fun showLoadingState() {
