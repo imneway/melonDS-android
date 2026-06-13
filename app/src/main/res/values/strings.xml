@@ -158,6 +158,7 @@
     <string name="empty_slot">%1$s. &lt;Empty&gt;</string>
     <string name="quick_slot">Quick Slot</string>
     <string name="auto_slot">Auto Slot</string>
+    <string name="pause_slot">Pause Save</string>
     <string name="saved">Saved</string>
     <string name="loaded">Loaded</string>
     <string name="auto_saved">Auto saved</string>

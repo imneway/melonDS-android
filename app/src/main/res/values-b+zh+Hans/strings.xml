@@ -157,6 +157,7 @@
     <string name="save_slot">存档槽</string>
     <string name="empty_slot">%1$s. &lt;空&gt;</string>
     <string name="quick_slot">快速存档槽</string>
+    <string name="pause_slot">暂停存档槽</string>
     <string name="saved">已保存</string>
     <string name="loaded">已读取</string>
     <string name="title_activity_settings">设置</string>

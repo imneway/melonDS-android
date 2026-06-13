@@ -39,6 +39,7 @@ class FileSystemSaveStatesRepository(
         return buildList {
             add(saveStateSlots[SaveStateSlot.QUICK_SAVE_SLOT])
             add(getRomAutoSaveStateSlot(rom))
+            add(getRomPauseSaveStateSlot(rom))
             addAll(saveStateSlots.drop(1))
         }
     }
@@ -54,6 +55,15 @@ class FileSystemSaveStatesRepository(
         val saveStateExists = quickSaveStateDocument != null
         val lastModified = quickSaveStateDocument?.let { Date(it.lastModified()) }
         val slot = SaveStateSlot(SaveStateSlot.QUICK_SAVE_SLOT, saveStateExists, lastModified, null)
+        val screenshotUri = saveStateScreenshotProvider.getRomSaveStateScreenshotUri(rom, slot)
+        return slot.copy(screenshot = screenshotUri)
+    }
+
+    override fun getRomPauseSaveStateSlot(rom: Rom): SaveStateSlot {
+        val pauseSaveStateDocument = getRomPauseSaveStateDocument(rom)
+        val saveStateExists = pauseSaveStateDocument != null
+        val lastModified = pauseSaveStateDocument?.let { Date(it.lastModified()) }
+        val slot = SaveStateSlot(SaveStateSlot.PAUSE_SAVE_SLOT, saveStateExists, lastModified, null)
         val screenshotUri = saveStateScreenshotProvider.getRomSaveStateScreenshotUri(rom, slot)
         return slot.copy(screenshot = screenshotUri)
     }
@@ -121,16 +131,27 @@ class FileSystemSaveStatesRepository(
         return saveStateDirectoryDocument.findFile(getAutoSaveStateFileName(romFileName))
     }
 
+    private fun getRomPauseSaveStateDocument(rom: Rom): DocumentFile? {
+        val saveStateDirectoryDocument = getSaveStateDirectoryDocument(rom) ?: return null
+        val romFileName = getRomFileNameWithoutExtension(rom) ?: return null
+
+        return saveStateDirectoryDocument.findFile(getPauseSaveStateFileName(romFileName))
+    }
+
     private fun getRomSaveStateFileName(romFileName: String, saveState: SaveStateSlot): String {
-        return if (saveState.slot == SaveStateSlot.AUTO_SAVE_SLOT) {
-            getAutoSaveStateFileName(romFileName)
-        } else {
-            "$romFileName.ml${saveState.slot}"
+        return when (saveState.slot) {
+            SaveStateSlot.AUTO_SAVE_SLOT -> getAutoSaveStateFileName(romFileName)
+            SaveStateSlot.PAUSE_SAVE_SLOT -> getPauseSaveStateFileName(romFileName)
+            else -> "$romFileName.ml${saveState.slot}"
         }
     }
 
     private fun getAutoSaveStateFileName(romFileName: String): String {
         return "$romFileName.mlauto"
+    }
+
+    private fun getPauseSaveStateFileName(romFileName: String): String {
+        return "$romFileName.mlpause"
     }
 
     private fun getSaveStateDirectoryDocument(rom: Rom): DocumentFile? {

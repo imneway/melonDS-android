@@ -68,6 +68,7 @@ import me.magnum.melonds.domain.services.EmulatorManager
 import me.magnum.melonds.impl.emulator.EmulatorSession
 import me.magnum.melonds.impl.layout.UILayoutProvider
 import me.magnum.melonds.ui.emulator.component.RetroAchievementsSubmissionHandler
+import me.magnum.melonds.ui.emulator.exceptions.SaveSlotLoadException
 import me.magnum.melonds.ui.emulator.firmware.FirmwarePauseMenuOption
 import me.magnum.melonds.ui.emulator.model.EmulatorState
 import me.magnum.melonds.ui.emulator.model.EmulatorUiEvent
@@ -349,6 +350,7 @@ class EmulatorViewModel @Inject constructor(
     fun pauseEmulator(showPauseMenu: Boolean) {
         sessionCoroutineScope.launch {
             emulatorManager.pauseEmulator()
+            savePauseStateForCurrentRom()
             if (showPauseMenu) {
                 val pauseOptions = when (_emulatorState.value) {
                     is EmulatorState.RunningRom -> {
@@ -366,6 +368,20 @@ class EmulatorViewModel @Inject constructor(
                     _uiEvent.emit(EmulatorUiEvent.ShowPauseMenu(PauseMenu(pauseOptions)))
                 }
             }
+        }
+    }
+
+    private suspend fun savePauseStateForCurrentRom(): Boolean {
+        val currentState = _emulatorState.value
+        if (currentState !is EmulatorState.RunningRom) {
+            return false
+        }
+
+        val pauseSlot = saveStatesRepository.getRomPauseSaveStateSlot(currentState.rom)
+        return try {
+            saveRomState(currentState.rom, pauseSlot)
+        } catch (_: SaveSlotLoadException) {
+            false
         }
     }
 

@@ -100,6 +100,7 @@ class SaveStateAdapter(
             return when (slot.slot) {
                 SaveStateSlot.QUICK_SAVE_SLOT -> context.getString(R.string.quick_slot)
                 SaveStateSlot.AUTO_SAVE_SLOT -> context.getString(R.string.auto_slot)
+                SaveStateSlot.PAUSE_SAVE_SLOT -> context.getString(R.string.pause_slot)
                 else -> slot.slot.toString()
             }
         }
