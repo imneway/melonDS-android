@@ -114,6 +114,7 @@ class EmulatorViewModel @Inject constructor(
 
     private val sessionCoroutineScope = EmulatorSessionCoroutineScope()
     private var raSessionJob: Job? = null
+    private var pauseStateSaveJob: Job? = null
 
     private val _exitInProgress = MutableStateFlow(false)
     fun isExitInProgress(): Boolean = _exitInProgress.value
@@ -351,7 +352,6 @@ class EmulatorViewModel @Inject constructor(
     fun pauseEmulator(showPauseMenu: Boolean) {
         sessionCoroutineScope.launch {
             emulatorManager.pauseEmulator()
-            savePauseStateForCurrentRom()
             if (showPauseMenu) {
                 val pauseOptions = when (_emulatorState.value) {
                     is EmulatorState.RunningRom -> {
@@ -369,24 +369,36 @@ class EmulatorViewModel @Inject constructor(
                     _uiEvent.emit(EmulatorUiEvent.ShowPauseMenu(PauseMenu(pauseOptions)))
                 }
             }
+
+            savePauseStateAfterPauseUiSettles()
         }
     }
 
-    private suspend fun savePauseStateForCurrentRom(): Boolean {
+    private fun savePauseStateAfterPauseUiSettles() {
+        val currentState = _emulatorState.value as? EmulatorState.RunningRom ?: return
+        pauseStateSaveJob?.cancel()
+        pauseStateSaveJob = sessionCoroutineScope.launch {
+            delay(250.milliseconds)
+            savePauseStateForRom(currentState.rom)
+        }
+    }
+
+    private suspend fun savePauseStateForRom(rom: Rom): Boolean {
         val currentState = _emulatorState.value
-        if (currentState !is EmulatorState.RunningRom) {
+        if (currentState !is EmulatorState.RunningRom || currentState.rom != rom) {
             return false
         }
 
-        val pauseSlot = saveStatesRepository.getRomPauseSaveStateSlot(currentState.rom)
+        val pauseSlot = saveStatesRepository.getRomPauseSaveStateSlot(rom)
         return try {
-            saveRomState(currentState.rom, pauseSlot)
+            saveRomState(rom, pauseSlot)
         } catch (_: SaveSlotLoadException) {
             false
         }
     }
 
     fun resumeEmulator() {
+        pauseStateSaveJob?.cancel()
         sessionCoroutineScope.launch {
             emulatorManager.resumeEmulator()
         }
