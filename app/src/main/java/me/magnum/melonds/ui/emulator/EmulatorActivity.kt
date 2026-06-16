@@ -207,8 +207,11 @@ class EmulatorActivity : AppCompatActivity() {
         }
 
         override fun onPausePressed() {
-            clearHotCornerPauseOverlay()
-            viewModel.pauseEmulator(true)
+            if (isPauseOverlayActive()) {
+                resumeEmulator()
+            } else {
+                viewModel.pauseEmulator(true)
+            }
         }
 
         override fun onFastForwardPressed() {
@@ -277,6 +280,7 @@ class EmulatorActivity : AppCompatActivity() {
     private val showAchievementList = mutableStateOf(false)
     private val showPendingSubmissionsDialog = mutableStateOf(false)
     private var isHotCornerPauseEnabled = false
+    private var pauseMenuDialog: AlertDialog? = null
 
     private val activeOverlays = EmulatorOverlayTracker(
         onOverlaysCleared = {
@@ -906,8 +910,17 @@ class EmulatorActivity : AppCompatActivity() {
     }
 
     private fun resumeEmulator() {
+        dismissPauseMenu()
         clearHotCornerPauseOverlay()
         viewModel.resumeEmulator()
+    }
+
+    private fun isPauseOverlayActive(): Boolean {
+        return isHotCornerPauseEnabled || pauseMenuDialog?.isShowing == true
+    }
+
+    private fun dismissPauseMenu() {
+        pauseMenuDialog?.dismiss()
     }
 
     private fun clearHotCornerPauseOverlay() {
@@ -926,7 +939,7 @@ class EmulatorActivity : AppCompatActivity() {
         }
 
         activeOverlays.addActiveOverlay(EmulatorOverlay.PAUSE_MENU)
-        AlertDialog.Builder(this)
+        pauseMenuDialog = AlertDialog.Builder(this)
                 .setTitle(R.string.pause)
                 .setItems(options) { _, which ->
                     val selectedOption = pauseMenu.options[which]
@@ -934,6 +947,7 @@ class EmulatorActivity : AppCompatActivity() {
                 }
                 .setOnDismissListener {
                     activeOverlays.removeActiveOverlay(EmulatorOverlay.PAUSE_MENU)
+                    pauseMenuDialog = null
                 }
                 .setOnCancelListener {
                     resumeEmulator()

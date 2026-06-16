@@ -115,6 +115,7 @@ class EmulatorViewModel @Inject constructor(
     private val sessionCoroutineScope = EmulatorSessionCoroutineScope()
     private var raSessionJob: Job? = null
     private var pauseStateSaveJob: Job? = null
+    private var quickSaveJob: Job? = null
 
     private val _exitInProgress = MutableStateFlow(false)
     fun isExitInProgress(): Boolean = _exitInProgress.value
@@ -376,7 +377,10 @@ class EmulatorViewModel @Inject constructor(
 
     private fun savePauseStateAfterPauseUiSettles() {
         val currentState = _emulatorState.value as? EmulatorState.RunningRom ?: return
-        pauseStateSaveJob?.cancel()
+        if (pauseStateSaveJob?.isActive == true) {
+            return
+        }
+
         pauseStateSaveJob = sessionCoroutineScope.launch {
             delay(250.milliseconds)
             savePauseStateForRom(currentState.rom)
@@ -563,13 +567,20 @@ class EmulatorViewModel @Inject constructor(
         val currentState = _emulatorState.value
         when (currentState) {
             is EmulatorState.RunningRom -> {
-                sessionCoroutineScope.launch {
-                    emulatorManager.pauseEmulator()
-                    val quickSlot = saveStatesRepository.getRomQuickSaveStateSlot(currentState.rom)
-                    if (saveRomState(currentState.rom, quickSlot)) {
-                        _toastEvent.emit(ToastEvent.QuickSaveSuccessful)
+                if (quickSaveJob?.isActive == true) {
+                    return
+                }
+
+                quickSaveJob = sessionCoroutineScope.launch {
+                    try {
+                        emulatorManager.pauseEmulator()
+                        val quickSlot = saveStatesRepository.getRomQuickSaveStateSlot(currentState.rom)
+                        if (saveRomState(currentState.rom, quickSlot)) {
+                            _toastEvent.emit(ToastEvent.QuickSaveSuccessful)
+                        }
+                    } finally {
+                        emulatorManager.resumeEmulator()
                     }
-                    emulatorManager.resumeEmulator()
                 }
             }
             is EmulatorState.RunningFirmware -> {
