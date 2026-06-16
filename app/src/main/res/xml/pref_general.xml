@@ -50,6 +50,38 @@
             app:iconSpaceReserved="false"
             android:defaultValue="true" />
 
+    <SwitchPreference
+            android:key="enable_hot_corner_top_left"
+            android:title="@string/hot_corner_top_left"
+            android:summary="@string/input_quick_save"
+            android:dependency="enable_hot_corners"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
+    <SwitchPreference
+            android:key="enable_hot_corner_top_right"
+            android:title="@string/hot_corner_top_right"
+            android:summary="@string/input_quick_load"
+            android:dependency="enable_hot_corners"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
+    <SwitchPreference
+            android:key="enable_hot_corner_bottom_left"
+            android:title="@string/hot_corner_bottom_left"
+            android:summary="@string/input_fast_forward"
+            android:dependency="enable_hot_corners"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
+    <SwitchPreference
+            android:key="enable_hot_corner_bottom_right"
+            android:title="@string/hot_corner_bottom_right"
+            android:summary="@string/input_pause"
+            android:dependency="enable_hot_corners"
+            app:iconSpaceReserved="false"
+            android:defaultValue="true" />
+
     <Preference
             android:key="backup_settings"
             android:title="@string/backup_settings"

@@ -39,6 +39,7 @@ import me.magnum.melonds.common.runtime.ScreenshotFrameBufferProvider
 import me.magnum.melonds.domain.model.Cheat
 import me.magnum.melonds.domain.model.ConsoleType
 import me.magnum.melonds.domain.model.FpsCounterPosition
+import me.magnum.melonds.domain.model.HotCornerConfiguration
 import me.magnum.melonds.domain.model.RomInfo
 import me.magnum.melonds.domain.model.RuntimeBackground
 import me.magnum.melonds.domain.model.SaveStateSlot
@@ -879,8 +880,8 @@ class EmulatorViewModel @Inject constructor(
         return settingsRepository.isSustainedPerformanceModeEnabled()
     }
 
-    fun areHotCornersEnabled(): Boolean {
-        return settingsRepository.areHotCornersEnabled()
+    fun getHotCornerConfiguration(): HotCornerConfiguration {
+        return settingsRepository.getHotCornerConfiguration()
     }
 
     fun getFpsCounterPosition(): FpsCounterPosition {

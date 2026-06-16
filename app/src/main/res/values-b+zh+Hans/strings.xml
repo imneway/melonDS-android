@@ -176,6 +176,12 @@
     <string name="rewind_memory_usage_above_recommended_limit">内存使用量超过建议限制</string>
     <string name="sustained_performance_mode">持续性能模式</string>
     <string name="sustained_performance_mode_summary">启用后，峰值性能会降低，但温度墙问题将没那么明显。</string>
+    <string name="hot_corners">热区角落</string>
+    <string name="hot_corners_summary">游玩时从屏幕四角触发快捷操作。</string>
+    <string name="hot_corner_top_left">左上角</string>
+    <string name="hot_corner_top_right">右上角</string>
+    <string name="hot_corner_bottom_left">左下角</string>
+    <string name="hot_corner_bottom_right">右下角</string>
     <string name="check_for_updates">检查更新</string>
     <string name="check_for_updates_summary">启用后，应用程序将定期检查可用更新</string>
     <string name="rom_icon_filtering">图标过滤</string>

@@ -35,6 +35,7 @@ import me.magnum.melonds.domain.model.ControllerConfiguration
 import me.magnum.melonds.domain.model.EmulatorConfiguration
 import me.magnum.melonds.domain.model.FirmwareConfiguration
 import me.magnum.melonds.domain.model.FpsCounterPosition
+import me.magnum.melonds.domain.model.HotCornerConfiguration
 import me.magnum.melonds.domain.model.MacAddress
 import me.magnum.melonds.domain.model.MicSource
 import me.magnum.melonds.domain.model.RendererConfiguration
@@ -190,6 +191,16 @@ class SharedPreferencesSettingsRepository(
 
     override fun areHotCornersEnabled(): Boolean {
         return preferences.getBoolean("enable_hot_corners", true)
+    }
+
+    override fun getHotCornerConfiguration(): HotCornerConfiguration {
+        return HotCornerConfiguration(
+            enabled = areHotCornersEnabled(),
+            topLeftEnabled = preferences.getBoolean("enable_hot_corner_top_left", true),
+            topRightEnabled = preferences.getBoolean("enable_hot_corner_top_right", true),
+            bottomLeftEnabled = preferences.getBoolean("enable_hot_corner_bottom_left", true),
+            bottomRightEnabled = preferences.getBoolean("enable_hot_corner_bottom_right", true),
+        )
     }
 
     override fun getRomSearchDirectories(): Array<Uri> {

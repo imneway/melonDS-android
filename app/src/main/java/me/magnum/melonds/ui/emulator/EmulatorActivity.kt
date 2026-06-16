@@ -870,10 +870,6 @@ class EmulatorActivity : AppCompatActivity() {
                 performHotCornerHapticFeedback()
                 toggleHotCornerPause()
             }
-
-            override fun onHotCornerReleased() {
-                performHotCornerHapticFeedback()
-            }
         })
     }
 
@@ -884,7 +880,7 @@ class EmulatorActivity : AppCompatActivity() {
     }
 
     private fun updateHotCornerState() {
-        binding.hotCornerView.setHotCornersEnabled(viewModel.areHotCornersEnabled())
+        binding.hotCornerView.setHotCornerConfiguration(viewModel.getHotCornerConfiguration())
     }
 
     private fun handleBackPressed() {

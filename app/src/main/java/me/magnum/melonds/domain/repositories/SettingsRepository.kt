@@ -18,6 +18,7 @@ interface SettingsRepository {
     fun isRewindEnabled(): Boolean
     fun isSustainedPerformanceModeEnabled(): Boolean
     fun areHotCornersEnabled(): Boolean
+    fun getHotCornerConfiguration(): HotCornerConfiguration
 
     fun getRomSearchDirectories(): Array<Uri>
     fun clearRomSearchDirectories()
