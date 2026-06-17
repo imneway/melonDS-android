@@ -93,6 +93,8 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
+private val PAUSE_STATE_SAVE_DELAY = 1500.milliseconds
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EmulatorViewModel @Inject constructor(
@@ -115,6 +117,7 @@ class EmulatorViewModel @Inject constructor(
     private val sessionCoroutineScope = EmulatorSessionCoroutineScope()
     private var raSessionJob: Job? = null
     private var pauseStateSaveJob: Job? = null
+    private var pauseStateSaveGeneration = 0L
     private var quickSaveJob: Job? = null
 
     private val _exitInProgress = MutableStateFlow(false)
@@ -381,9 +384,18 @@ class EmulatorViewModel @Inject constructor(
             return
         }
 
+        val generation = ++pauseStateSaveGeneration
         pauseStateSaveJob = sessionCoroutineScope.launch {
-            delay(250.milliseconds)
-            savePauseStateForRom(currentState.rom)
+            try {
+                delay(PAUSE_STATE_SAVE_DELAY)
+                if (pauseStateSaveGeneration == generation) {
+                    savePauseStateForRom(currentState.rom)
+                }
+            } finally {
+                if (pauseStateSaveGeneration == generation) {
+                    pauseStateSaveJob = null
+                }
+            }
         }
     }
 
@@ -402,6 +414,7 @@ class EmulatorViewModel @Inject constructor(
     }
 
     fun resumeEmulator() {
+        pauseStateSaveGeneration++
         pauseStateSaveJob?.cancel()
         sessionCoroutineScope.launch {
             emulatorManager.resumeEmulator()
