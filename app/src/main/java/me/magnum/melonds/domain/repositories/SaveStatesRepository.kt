@@ -8,7 +8,10 @@ import me.magnum.melonds.domain.model.SaveStateSlot
 interface SaveStatesRepository {
     fun getRomSaveStates(rom: Rom): List<SaveStateSlot>
     fun getRomQuickSaveStateSlot(rom: Rom): SaveStateSlot
+    fun getRomPauseSaveStateSlot(rom: Rom): SaveStateSlot
+    fun getRomLatestSaveStateSlot(rom: Rom): SaveStateSlot?
     fun getRomSaveStateUri(rom: Rom, saveState: SaveStateSlot): Uri
     fun setRomSaveStateScreenshot(rom: Rom, saveState: SaveStateSlot, screenshot: Bitmap)
+    fun deleteRomSaveStateScreenshot(rom: Rom, saveState: SaveStateSlot)
     fun deleteRomSaveState(rom: Rom, saveState: SaveStateSlot)
 }

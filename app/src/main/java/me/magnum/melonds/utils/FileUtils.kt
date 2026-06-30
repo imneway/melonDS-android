@@ -70,10 +70,14 @@ object FileUtils {
         }
     }
 
-    private fun getAbsolutePathFromSingleUri(context: Context, uri: Uri): String? {
-        return context.contentResolver.openFileDescriptor(uri, "r")?.use {
-            val file = File("/proc/self/fd/${it.fd}")
-            Os.readlink(file.absolutePath)
+    fun getAbsolutePathFromSingleUri(context: Context, uri: Uri): String? {
+        return try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                val file = File("/proc/self/fd/${it.fd}")
+                Os.readlink(file.absolutePath)
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

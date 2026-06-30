@@ -3,19 +3,18 @@ package me.magnum.melonds.common.romprocessors
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import io.reactivex.Single
 import me.magnum.melonds.common.uridelegates.UriHandler
-import me.magnum.melonds.domain.model.rom.Rom
-import me.magnum.melonds.domain.model.rom.config.RomConfig
 import me.magnum.melonds.domain.model.RomInfo
 import me.magnum.melonds.domain.model.RomMetadata
+import me.magnum.melonds.domain.model.rom.Rom
+import me.magnum.melonds.domain.model.rom.config.RomConfig
 import me.magnum.melonds.extensions.isBlank
 import me.magnum.melonds.extensions.nameWithoutExtension
 import me.magnum.melonds.utils.RomProcessor
 
 class NdsRomFileProcessor(private val context: Context, private val uriHandler: UriHandler) : RomFileProcessor {
 
-    override fun getRomFromUri(romUri: Uri, parentUri: Uri): Rom? {
+    override fun getRomFromUri(romUri: Uri, parentUri: Uri?): Rom? {
         return try {
             getRomMetadata(romUri)?.let { metadata ->
                 val romDocument = uriHandler.getUriDocument(romUri)
@@ -26,7 +25,7 @@ class NdsRomFileProcessor(private val context: Context, private val uriHandler: 
                     fileName = romDocument?.name ?: "",
                     uri = romUri,
                     parentTreeUri = parentUri,
-                    config = RomConfig(),
+                    config = if (metadata.isDSiWareTitle) RomConfig.forDsiWareTitle() else RomConfig.default(),
                     lastPlayed = null,
                     isDsiWareTitle = metadata.isDSiWareTitle,
                     retroAchievementsHash = metadata.retroAchievementsHash
@@ -41,7 +40,7 @@ class NdsRomFileProcessor(private val context: Context, private val uriHandler: 
     override fun getRomIcon(rom: Rom): Bitmap? {
         return try {
             context.contentResolver.openInputStream(rom.uri)?.use { inputStream ->
-                RomProcessor.getRomIcon(inputStream.buffered())
+                RomProcessor.getRomIcon(inputStream)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -60,13 +59,13 @@ class NdsRomFileProcessor(private val context: Context, private val uriHandler: 
         }
     }
 
-    override fun getRealRomUri(rom: Rom): Single<Uri> {
-        return Single.just(rom.uri)
+    override suspend fun getRealRomUri(rom: Rom): Uri {
+        return rom.uri
     }
 
     private fun getRomMetadata(uri: Uri): RomMetadata? {
         return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            RomProcessor.getRomMetadata(inputStream.buffered())
+            RomProcessor.getRomMetadata(inputStream)
         }
     }
 }

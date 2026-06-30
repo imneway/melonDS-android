@@ -1,10 +1,10 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt.android)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -14,10 +14,17 @@ android {
     signingConfigs {
         create("release") {
             val props = gradleLocalProperties(rootDir, providers)
-            storeFile = file(props["MELONDS_KEYSTORE"] as String)
-            storePassword = props["MELONDS_KEYSTORE_PASSWORD"] as String
-            keyAlias = props["MELONDS_KEY_ALIAS"] as String
-            keyPassword = props["MELONDS_KEY_PASSWORD"] as String
+            val keystorePath = props["MELONDS_KEYSTORE"] as String?
+            val keystorePassword = props["MELONDS_KEYSTORE_PASSWORD"] as String?
+            val keyAlias = props["MELONDS_KEY_ALIAS"] as String?
+            val keyPassword = props["MELONDS_KEY_PASSWORD"] as String?
+
+            if (keystorePath != null && keystorePassword != null && keyAlias != null && keyPassword != null) {
+                storeFile = file(keystorePath)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+            }
         }
     }
 
@@ -39,9 +46,6 @@ android {
                 cppFlags("-std=c++17 -Wno-write-strings")
             }
         }
-        ksp {
-            arg("room.schemaLocation", "$projectDir/schemas")
-        }
         vectorDrawables.useSupportLibrary = true
     }
     buildFeatures {
@@ -51,8 +55,11 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            val props = gradleLocalProperties(rootDir, providers)
+            if (props["MELONDS_KEYSTORE"] as String? != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         getByName("debug") {
             applicationIdSuffix = ".dev"
@@ -90,26 +97,27 @@ android {
     }
     sourceSets {
         // Adds exported schema location as test app assets.
-        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("androidTest").assets.directories += "$projectDir/schemas"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-        isCoreLibraryDesugaringEnabled = true
+    }
+}
 
-        kotlin {
-            jvmToolchain(21)
-            kotlinOptions {
-                freeCompilerArgs += "-opt-in=kotlin.ExperimentalUnsignedTypes"
-            }
-        }
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_21
+        freeCompilerArgs.add("-opt-in=kotlin.ExperimentalUnsignedTypes")
+    }
+
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
 }
 
 dependencies {
     val gitHubImplementation by configurations
-
-    coreLibraryDesugaring(libs.android.desugaring)
 
     implementation(projects.masterswitch)
     implementation(projects.rcheevosApi)
@@ -141,10 +149,10 @@ dependencies {
     implementation(libs.android.material)
 
     implementation(platform(libs.compose.bom))
-    implementation(libs.accompanist.pagerindicators)
     implementation(libs.accompanist.systemuicontroller)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material)
+    implementation(libs.compose.material3)
     implementation(libs.compose.material.icons)
     implementation(libs.compose.navigation)
     implementation(libs.compose.ui)
@@ -161,8 +169,6 @@ dependencies {
     implementation(libs.markwon)
     implementation(libs.markwon.imagepicasso)
     implementation(libs.markwon.linkify)
-    implementation(libs.rxjava)
-    implementation(libs.rxjava.android)
     implementation(libs.commons.compress)
     implementation(libs.xz)
 

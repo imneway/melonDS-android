@@ -12,9 +12,15 @@ abstract class FeedbackInputHandler(inputListener: IInputListener, private val e
     }
 
     protected fun performHapticFeedback(view: View, type: HapticFeedbackType) {
-        if (enableHapticFeedback) {
+        if (!enableHapticFeedback) {
+            return
+        }
+
+        if (touchVibrator.supportsVibration()) {
+            touchVibrator.performTouchHapticFeedback()
+        } else {
             val feedbackType = when (type) {
-                HapticFeedbackType.KEY_PRESS -> HapticFeedbackConstants.KEYBOARD_TAP
+                HapticFeedbackType.KEY_PRESS -> HapticFeedbackConstants.LONG_PRESS
                 HapticFeedbackType.KEY_RELEASE -> HapticFeedbackConstants.CLOCK_TICK
             }
             view.performHapticFeedback(feedbackType)

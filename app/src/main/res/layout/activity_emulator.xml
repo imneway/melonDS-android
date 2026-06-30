@@ -26,6 +26,11 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+    <me.magnum.melonds.ui.emulator.HotCornerView
+            android:id="@+id/hotCornerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
     <TextView
             android:id="@+id/textFps"
             android:layout_width="wrap_content"
@@ -60,5 +65,6 @@
             android:id="@+id/list_rewind"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipToPadding="false"
             app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.motion.widget.MotionLayout>
