@@ -66,7 +66,9 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
 
         // Author: Gigaherz
         // License: Public domain
-        val LcdShader = ShaderProgramSource(
+        // cellScale is the size of one LCD cell in source pixels: 1.0 = finest (one cell per source pixel), larger
+        // values enlarge the grid for a coarser grain. Only the vertex omega changes; the fragment shader is shared.
+        private fun lcdShaderSource(cellScale: Float) = ShaderProgramSource(
             TextureFiltering.NEAREST,
                 "attribute vec2 vPos;\n" +
                     "attribute vec2 vUV;\n" +
@@ -79,7 +81,7 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                     "    gl_Position = vec4(vPos, 0.0, 1.0);\n" +
                     "    uv = vUV;\n" +
                     "    alpha = vAlpha;\n" +
-                    "    omega = 3.141592654 * 2.0 * vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    omega = 3.141592654 * 2.0 * vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT) / $cellScale;\n" +
                     "}",
             "#ifdef GL_OES_standard_derivatives\n" +
                     "#extension GL_OES_standard_derivatives : enable\n" +
@@ -132,6 +134,10 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                     "    gl_FragColor.a = alpha;\n" +
                     "}"
         )
+
+        val LcdShader = lcdShaderSource(1.0f)
+
+        val LcdCoarseShader = lcdShaderSource(2.0f)
 
         // Author: Themaister
         // This code is hereby placed in the public domain.
