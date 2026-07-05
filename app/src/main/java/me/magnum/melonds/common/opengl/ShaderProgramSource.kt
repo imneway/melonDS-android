@@ -81,17 +81,21 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                     "    alpha = vAlpha;\n" +
                     "    omega = 3.141592654 * 2.0 * vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
                     "}",
-            "#ifdef GL_FRAGMENT_PRECISION_HIGH\n" +
+            "#ifdef GL_OES_standard_derivatives\n" +
+                    "#extension GL_OES_standard_derivatives : enable\n" +
+                    "#endif\n" +
+                    "#ifdef GL_FRAGMENT_PRECISION_HIGH\n" +
                     "precision highp float;\n" +
                     "#else\n" +
                     "precision mediump float;\n" +
                     "#endif\n" +
                     "uniform sampler2D tex;\n" +
+                    "uniform float uHeadroom;\n" + // 1.0 = SDR (roll highlights to white); >1.0 = available HDR headroom
                     "varying vec2 uv;\n" +
                     "varying float alpha;\n" +
                     "varying vec2 omega;\n" +
                     "" +
-                    "/* configuration (higher values mean brighter image but reduced effect depth) */\n" +
+                    "/* Base values control effect depth. The normalisation below keeps the mean brightness at 1.0. */\n" +
                     "const float brighten_scanlines = 16.0;\n" +
                     "const float brighten_lcd = 4.0;\n" +
                     "" +
@@ -100,10 +104,31 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                     "void main() {\n" +
                     "    vec2 angle = uv * omega;\n" +
                     "" +
-                    "    float yfactor = (brighten_scanlines + sin(angle.y)) / (brighten_scanlines + 1.0);\n" +
-                    "    vec3 xfactors = (brighten_lcd + sin(angle.x + offsets)) / (brighten_lcd + 1.0);\n" +
+                    "#ifdef GL_OES_standard_derivatives\n" +
+                    "    /* Analytic anti-aliasing: average sin() over the pixel's phase footprint (sinc weighting). */\n" +
+                    "    vec2 hw = 0.5 * abs(fwidth(angle));\n" +
+                    "    float sy = sin(angle.y) * (hw.y > 0.0001 ? sin(hw.y) / hw.y : 1.0);\n" +
+                    "    vec3 sx = sin(angle.x + offsets) * (hw.x > 0.0001 ? sin(hw.x) / hw.x : 1.0);\n" +
+                    "#else\n" +
+                    "    float sy = sin(angle.y);\n" +
+                    "    vec3 sx = sin(angle.x + offsets);\n" +
+                    "#endif\n" +
                     "" +
-                    "    gl_FragColor.rgb = yfactor * xfactors * texture2D(tex, uv).bgr;\n" +
+                    "    /* Divide by the base (not base + 1) so the modulation averages to 1.0 -> no net darkening. */\n" +
+                    "    float yfactor = (brighten_scanlines + sy) / brighten_scanlines;\n" +
+                    "    vec3 xfactors = (brighten_lcd + sx) / brighten_lcd;\n" +
+                    "" +
+                    "    vec3 color = yfactor * xfactors * texture2D(tex, uv).bgr;\n" +
+                    "" +
+                    "    /* Map the bright-phase overshoot into the available headroom. The peak modulation gain (bright\n" +
+                    "       phase, white texel) is (bs + 1)/bs * (bl + 1)/bl, so the overshoot lies in [1, peak]. Remap it\n" +
+                    "       linearly into [1, uHeadroom], capped at the peak so full headroom restores the original value\n" +
+                    "       exactly without overshooting it. SDR (uHeadroom == 1.0) collapses this to a hard clamp to white. */\n" +
+                    "    float peakExcess = (brighten_scanlines + 1.0) / brighten_scanlines * (brighten_lcd + 1.0) / brighten_lcd - 1.0;\n" +
+                    "    float mapRange = min(uHeadroom - 1.0, peakExcess);\n" +
+                    "    vec3 base = min(color, vec3(1.0));\n" +
+                    "    vec3 excess = max(color - 1.0, 0.0);\n" +
+                    "    gl_FragColor.rgb = base + mapRange * excess / peakExcess;\n" +
                     "    gl_FragColor.a = alpha;\n" +
                     "}"
         )

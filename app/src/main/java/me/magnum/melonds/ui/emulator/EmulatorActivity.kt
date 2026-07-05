@@ -5,8 +5,10 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.Display
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -337,6 +339,7 @@ class EmulatorActivity : AppCompatActivity() {
         binding.surfaceMain.apply {
             setRenderer(mainScreenRenderer)
         }
+        logDisplayHdrCapabilities()
 
         binding.textFps.visibility = View.INVISIBLE
         binding.viewLayoutControls.setLayoutComponentViewBuilderFactory(RuntimeLayoutComponentViewBuilderFactory())
@@ -718,6 +721,38 @@ class EmulatorActivity : AppCompatActivity() {
                     }
                     .show()
         }
+    }
+
+    /**
+     * Logs the display's HDR headroom capabilities for the HDR LCD path (plan "E"). Read-only probe; grep logcat for
+     * "MelonHdr". Combined with [GlContext]'s EGL probe, this tells us on real hardware whether the FP16 + scRGB surface
+     * switch is worth wiring up (i.e. whether ColorOS grants headroom to an app-drawn surface).
+     */
+    @Suppress("DEPRECATION") // getHdrCapabilities / supportedHdrTypes / desiredMaxLuminance / defaultDisplay: read-only probe kept simple across API levels
+    private fun logDisplayHdrCapabilities() {
+        val activityDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display
+        } else {
+            windowManager.defaultDisplay
+        }
+        val info = StringBuilder("Display HDR probe: sdkInt=${Build.VERSION.SDK_INT}")
+        if (activityDisplay == null) {
+            Log.i("MelonHdr", "$info display=null")
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val ratioAvailable = activityDisplay.isHdrSdrRatioAvailable
+            info.append(" hdrSdrRatioAvailable=$ratioAvailable")
+            if (ratioAvailable) {
+                info.append(" hdrSdrRatio=${activityDisplay.hdrSdrRatio}")
+            }
+        }
+        val hdrCapabilities = activityDisplay.hdrCapabilities
+        if (hdrCapabilities != null) {
+            info.append(" supportedHdrTypes=${hdrCapabilities.supportedHdrTypes.toList()}")
+            info.append(" desiredMaxLuminance=${hdrCapabilities.desiredMaxLuminance}")
+        }
+        Log.i("MelonHdr", info.toString())
     }
 
     override fun onResume() {

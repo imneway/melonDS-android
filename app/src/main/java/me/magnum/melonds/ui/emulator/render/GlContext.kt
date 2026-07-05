@@ -5,7 +5,14 @@ import android.opengl.EGLConfig
 import android.opengl.EGLDisplay
 import android.opengl.EGLExt
 import android.opengl.EGLSurface
+import android.util.Log
 import android.view.Surface
+
+private const val HDR_LOG_TAG = "MelonHdr"
+
+// From EGL_EXT_pixel_format_float. Not exposed by android.opengl.EGL14/EGLExt, so declared here.
+private const val EGL_COLOR_COMPONENT_TYPE_EXT = 0x3339
+private const val EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT = 0x333B
 
 class GlContext(sharedEglContext: Long? = null) {
 
@@ -24,11 +31,45 @@ class GlContext(sharedEglContext: Long? = null) {
             throw GlContextException("Unable to initialize EGL")
         }
 
+        logHdrCapabilities()
+
         config = createGlConfig()
         context = createContext(display.nativeHandle, config.nativeHandle, sharedEglContext ?: 0)
         if (context == 0L) {
             throw GlContextException("Failed to create context: ${EGL14.eglGetError()}")
         }
+    }
+
+    /**
+     * Probes the EGL prerequisites for the HDR LCD path (plan "E") and logs them. This does not change rendering; it only
+     * surfaces, on real hardware, whether an FP16 + scRGB surface can be created so the surface switch can be wired up
+     * with confidence. Grep logcat for the [HDR_LOG_TAG] tag.
+     */
+    private fun logHdrCapabilities() {
+        val extensions = EGL14.eglQueryString(display, EGL14.EGL_EXTENSIONS).orEmpty()
+        val hasFloatPixels = extensions.contains("EGL_EXT_pixel_format_float")
+        val hasScRgb = extensions.contains("EGL_EXT_gl_colorspace_scrgb") // non-linear extended-sRGB
+        val hasScRgbLinear = extensions.contains("EGL_EXT_gl_colorspace_scrgb_linear")
+
+        val fp16Config = arrayOfNulls<EGLConfig?>(1)
+        val fp16Count = IntArray(1)
+        val fp16Attribs = intArrayOf(
+            EGL14.EGL_RENDERABLE_TYPE, EGLExt.EGL_OPENGL_ES3_BIT_KHR,
+            EGL_COLOR_COMPONENT_TYPE_EXT, EGL_COLOR_COMPONENT_TYPE_FLOAT_EXT,
+            EGL14.EGL_RED_SIZE, 16,
+            EGL14.EGL_GREEN_SIZE, 16,
+            EGL14.EGL_BLUE_SIZE, 16,
+            EGL14.EGL_ALPHA_SIZE, 16,
+            EGL14.EGL_DEPTH_SIZE, 24,
+            EGL14.EGL_STENCIL_SIZE, 8,
+            EGL14.EGL_NONE,
+        )
+        val fp16ConfigOk = EGL14.eglChooseConfig(display, fp16Attribs, 0, fp16Config, 0, 1, fp16Count, 0) && fp16Count[0] > 0
+
+        Log.i(
+            HDR_LOG_TAG,
+            "EGL HDR probe: fp16PixelFormat=$hasFloatPixels scRGB=$hasScRgb scRGBLinear=$hasScRgbLinear fp16ConfigChoosable=$fp16ConfigOk",
+        )
     }
 
     fun use(surface: EGLSurface) {

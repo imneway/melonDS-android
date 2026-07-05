@@ -58,11 +58,24 @@ class DSRenderer(private val context: Context) : EmulatorRenderer {
     private var backgroundWidth = 0
     private var backgroundHeight = 0
 
+    // Ratio of peak displayable white to SDR white for HDR-aware filters (LCD). 1.0 keeps behaviour fully within SDR.
+    // Written from the display's HDR/SDR-ratio listener (UI thread), read on the render thread.
+    @Volatile
+    private var hdrHeadroom = 1.0f
+
     override fun updateRendererConfiguration(newRendererConfiguration: RuntimeRendererConfiguration?) {
         synchronized(configurationLock) {
             rendererConfiguration = newRendererConfiguration
             mustUpdateConfiguration = true
         }
+    }
+
+    /**
+     * Updates the HDR headroom used by HDR-aware filters. 1.0 (default) stays within SDR so the LCD filter rolls its
+     * bright phase off to white; values above 1.0 let the bright phase exceed SDR white when the display grants headroom.
+     */
+    fun setHdrHeadroom(headroom: Float) {
+        hdrHeadroom = headroom
     }
 
     override fun setLeftRotationEnabled(enabled: Boolean) {
@@ -269,6 +282,7 @@ class DSRenderer(private val context: Context) : EmulatorRenderer {
             GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, screensVbo)
 
             shader.use()
+            shader.setHeadroom(hdrHeadroom)
 
             GLES30.glActiveTexture(GLES30.GL_TEXTURE0)
             GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, presentFrameWrapper.textureId)
