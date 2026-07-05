@@ -775,13 +775,18 @@ class EmulatorActivity : AppCompatActivity() {
             window.setDesiredHdrHeadroom(LCD_PEAK_HEADROOM)
         }
 
+        // Drive the LCD bright phase straight to the peak on the scRGB (extended) surface. Writing values > 1.0 is itself
+        // the request for headroom: gating on getHdrSdrRatio() would deadlock, because with no overbright content on
+        // screen the compositor never grants headroom, so the ratio would stay 1.0 forever. Anything beyond the headroom
+        // the system actually grants gets tone-mapped/clamped by the compositor, so overshooting to the peak is safe.
+        mainScreenRenderer.setHdrHeadroom(LCD_PEAK_HEADROOM)
+
+        // Observe the ratio the compositor actually grants (diagnostics only).
         val listener = Consumer<Display> { updatedDisplay ->
-            mainScreenRenderer.setHdrHeadroom(updatedDisplay.hdrSdrRatio.coerceIn(1.0f, LCD_PEAK_HEADROOM))
+            Log.i("MelonHdr", "hdrSdrRatio granted: ${updatedDisplay.hdrSdrRatio}")
         }
         activityDisplay.registerHdrSdrRatioChangedListener(mainExecutor, listener)
         hdrSdrRatioListener = listener
-        // Seed with the current ratio so the filter reflects any headroom already granted.
-        mainScreenRenderer.setHdrHeadroom(activityDisplay.hdrSdrRatio.coerceIn(1.0f, LCD_PEAK_HEADROOM))
         Log.i("MelonHdr", "HDR headroom requested (peak $LCD_PEAK_HEADROOM), current ratio ${activityDisplay.hdrSdrRatio}")
     }
 
