@@ -107,11 +107,15 @@ import me.magnum.melonds.ui.layouteditor.model.LayoutTarget
 import me.magnum.melonds.ui.settings.SettingsActivity
 import me.magnum.melonds.ui.theme.MelonTheme
 import java.text.SimpleDateFormat
+import java.util.function.Consumer
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class EmulatorActivity : AppCompatActivity() {
     companion object {
+        // Peak modulation gain of the LCD filter's bright phase: (bs + 1)/bs * (bl + 1)/bl with bs = 16, bl = 4.
+        private const val LCD_PEAK_HEADROOM = 1.33f
+
         const val KEY_ROM = "rom"
         const val KEY_PATH = "PATH"
         const val KEY_URI = "uri"
@@ -195,6 +199,7 @@ class EmulatorActivity : AppCompatActivity() {
     private lateinit var frameRenderCoordinator: FrameRenderCoordinator
     private lateinit var choreographerFrameRenderer: ChoreographerFrameRenderer
     private lateinit var mainScreenRenderer: DSRenderer
+    private var hdrSdrRatioListener: Consumer<Display>? = null
     private lateinit var melonTouchHandler: MelonTouchHandler
     private lateinit var nativeInputListener: INativeInputListener
     private val frontendInputHandler = object : FrontendInputHandler() {
@@ -755,6 +760,43 @@ class EmulatorActivity : AppCompatActivity() {
         Log.i("MelonHdr", info.toString())
     }
 
+    /**
+     * Requests HDR headroom for the LCD filter's overbright highlights and streams the display's actual HDR/SDR ratio into
+     * the renderer. If the surface is not HDR-capable or the system grants no headroom (ratio stays 1.0), the filter simply
+     * stays within SDR (plan "C+"). Paired with [teardownHdrHeadroom] on pause.
+     */
+    private fun setupHdrHeadroom() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        if (hdrSdrRatioListener != null || !frameRenderCoordinator.isHdrCapable) return
+        val activityDisplay = display ?: return
+        if (!activityDisplay.isHdrSdrRatioAvailable) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            window.setDesiredHdrHeadroom(LCD_PEAK_HEADROOM)
+        }
+
+        val listener = Consumer<Display> { updatedDisplay ->
+            mainScreenRenderer.setHdrHeadroom(updatedDisplay.hdrSdrRatio.coerceIn(1.0f, LCD_PEAK_HEADROOM))
+        }
+        activityDisplay.registerHdrSdrRatioChangedListener(mainExecutor, listener)
+        hdrSdrRatioListener = listener
+        // Seed with the current ratio so the filter reflects any headroom already granted.
+        mainScreenRenderer.setHdrHeadroom(activityDisplay.hdrSdrRatio.coerceIn(1.0f, LCD_PEAK_HEADROOM))
+        Log.i("MelonHdr", "HDR headroom requested (peak $LCD_PEAK_HEADROOM), current ratio ${activityDisplay.hdrSdrRatio}")
+    }
+
+    private fun teardownHdrHeadroom() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        hdrSdrRatioListener?.let { listener ->
+            display?.unregisterHdrSdrRatioChangedListener(listener)
+            hdrSdrRatioListener = null
+            mainScreenRenderer.setHdrHeadroom(1.0f)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                window.setDesiredHdrHeadroom(0f)
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         setupFullscreen()
@@ -764,6 +806,8 @@ class EmulatorActivity : AppCompatActivity() {
             disableScreenTimeOut()
             resumeEmulator()
         }
+
+        setupHdrHeadroom()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -1135,6 +1179,7 @@ class EmulatorActivity : AppCompatActivity() {
         enableScreenTimeOut()
         choreographerFrameRenderer.stopRendering()
         viewModel.pauseEmulatorAndAutoSave()
+        teardownHdrHeadroom()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

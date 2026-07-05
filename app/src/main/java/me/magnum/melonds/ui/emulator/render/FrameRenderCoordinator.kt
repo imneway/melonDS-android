@@ -23,6 +23,10 @@ class FrameRenderCoordinator {
         frameRenderThread.start()
     }
 
+    /** Whether the render surface supports HDR overbright output (FP16 + scRGB), enabling the LCD filter's HDR headroom path. */
+    val isHdrCapable: Boolean
+        get() = glContext.isHdrCapable
+
     fun addSurface(surface: EmulatorSurfaceView) {
         synchronized(surfacesLock) {
             managedSurfaces.add(surface)
