@@ -2,6 +2,7 @@ package me.magnum.melonds.ui.emulator
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
@@ -771,6 +772,9 @@ class EmulatorActivity : AppCompatActivity() {
         val activityDisplay = display ?: return
         if (!activityDisplay.isHdrSdrRatioAvailable) return
 
+        // Declaring the window as HDR is what actually puts the compositor into the HDR pipeline on many ROMs; an scRGB
+        // surface plus setDesiredHdrHeadroom alone is often not enough to make the display grant headroom.
+        window.colorMode = ActivityInfo.COLOR_MODE_HDR
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.setDesiredHdrHeadroom(LCD_PEAK_HEADROOM)
         }
@@ -781,13 +785,15 @@ class EmulatorActivity : AppCompatActivity() {
         // the system actually grants gets tone-mapped/clamped by the compositor, so overshooting to the peak is safe.
         mainScreenRenderer.setHdrHeadroom(LCD_PEAK_HEADROOM)
 
-        // Observe the ratio the compositor actually grants (diagnostics only).
         val listener = Consumer<Display> { updatedDisplay ->
             Log.i("MelonHdr", "hdrSdrRatio granted: ${updatedDisplay.hdrSdrRatio}")
         }
         activityDisplay.registerHdrSdrRatioChangedListener(mainExecutor, listener)
         hdrSdrRatioListener = listener
-        Log.i("MelonHdr", "HDR headroom requested (peak $LCD_PEAK_HEADROOM), current ratio ${activityDisplay.hdrSdrRatio}")
+        // The change listener only fires on transitions, so also poll a couple of times to surface the settled ratio.
+        handler.postDelayed({ Log.i("MelonHdr", "hdrSdrRatio poll @1s: ${display?.hdrSdrRatio}") }, 1000)
+        handler.postDelayed({ Log.i("MelonHdr", "hdrSdrRatio poll @3s: ${display?.hdrSdrRatio}") }, 3000)
+        Log.i("MelonHdr", "HDR headroom requested (peak $LCD_PEAK_HEADROOM, colorMode=HDR), current ratio ${activityDisplay.hdrSdrRatio}")
     }
 
     private fun teardownHdrHeadroom() {
@@ -796,6 +802,7 @@ class EmulatorActivity : AppCompatActivity() {
             display?.unregisterHdrSdrRatioChangedListener(listener)
             hdrSdrRatioListener = null
             mainScreenRenderer.setHdrHeadroom(1.0f)
+            window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 window.setDesiredHdrHeadroom(0f)
             }
