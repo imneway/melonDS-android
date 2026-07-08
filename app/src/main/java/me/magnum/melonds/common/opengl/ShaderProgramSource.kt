@@ -137,7 +137,7 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
 
         val LcdShader = lcdShaderSource(1.0f)
 
-        val LcdCoarseShader = lcdShaderSource(2.0f)
+        val LcdCoarseShader = lcdShaderSource(1.5f)
 
         // Author: Themaister
         // This code is hereby placed in the public domain.
