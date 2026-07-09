@@ -137,7 +137,9 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
 
         val LcdShader = lcdShaderSource(1.0f)
 
-        val LcdCoarseShader = lcdShaderSource(1.5f)
+        // 4/3: 256 / (4/3) = 192 whole cells across, so the sub-pixel moire repeats cleanly every
+        // 4 source pixels with no phase drift across the width (unlike 1.5 or a truncated 1.333).
+        val LcdCoarseShader = lcdShaderSource(4.0f / 3.0f)
 
         // Author: Themaister
         // This code is hereby placed in the public domain.
