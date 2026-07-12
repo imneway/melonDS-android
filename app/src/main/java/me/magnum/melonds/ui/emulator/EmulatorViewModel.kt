@@ -380,7 +380,7 @@ class EmulatorViewModel @Inject constructor(
 
     private fun savePauseStateAfterPauseUiSettles() {
         val currentState = _emulatorState.value as? EmulatorState.RunningRom ?: return
-        if (pauseStateSaveJob?.isActive == true) {
+        if (_exitInProgress.value || pauseStateSaveJob?.isActive == true) {
             return
         }
 
@@ -401,7 +401,7 @@ class EmulatorViewModel @Inject constructor(
 
     private suspend fun savePauseStateForRom(rom: Rom): Boolean {
         val currentState = _emulatorState.value
-        if (currentState !is EmulatorState.RunningRom || currentState.rom != rom) {
+        if (_exitInProgress.value || currentState !is EmulatorState.RunningRom || currentState.rom != rom) {
             return false
         }
 
@@ -414,8 +414,7 @@ class EmulatorViewModel @Inject constructor(
     }
 
     fun resumeEmulator() {
-        pauseStateSaveGeneration++
-        pauseStateSaveJob?.cancel()
+        cancelPendingPauseStateSave()
         sessionCoroutineScope.launch {
             emulatorManager.resumeEmulator()
         }
@@ -440,11 +439,25 @@ class EmulatorViewModel @Inject constructor(
     }
 
     private fun stopEmulator() {
+        cancelPendingPauseStateSave()
         viewModelScope.launch {
             _achievementsEvent.emit(RAEventUi.Reset)
         }
         emulatorManager.stopEmulator()
         screenshotFrameBufferProvider.clearBuffer()
+    }
+
+    /**
+     * Cancels the delayed pause-state save, if one is pending. Must be called before stopping the emulator: the native
+     * instance is freed on stop, and a save state request that fires after that crashes the process. Returns the
+     * cancelled job so callers can [Job.join] it to ensure an already in-flight save has finished.
+     */
+    private fun cancelPendingPauseStateSave(): Job? {
+        pauseStateSaveGeneration++
+        val pendingJob = pauseStateSaveJob
+        pauseStateSaveJob = null
+        pendingJob?.cancel()
+        return pendingJob
     }
 
     private fun stopEmulatorAndExit() {
@@ -459,8 +472,12 @@ class EmulatorViewModel @Inject constructor(
         }
 
         _exitInProgress.value = true
+        val pendingPauseStateSave = cancelPendingPauseStateSave()
         sessionCoroutineScope.launch {
             try {
+                // Wait for an in-flight pause-state save to finish so it cannot overlap the autosave or outlive the
+                // emulator instance, which is freed in stopEmulator()
+                pendingPauseStateSave?.join()
                 autoSaveCurrentRom(resumeAfterSave = false, emitSuccessToast = true)
             } finally {
                 stopEmulator()
